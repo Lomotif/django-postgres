@@ -50,7 +50,7 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
             # values is appropriate.
             if not isinstance(value, six.string_types):
                 value = '%s' % value
-        if lookup_type == 'has_keys':
+        if lookup_type in ['all_keys', 'any_keys']:
             if isinstance(value, six.string_types):
                 value = [value]
             # This will cast numbers to strings, but also grab the keys
@@ -60,7 +60,7 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
         return value
     
     def get_db_prep_lookup(self, lookup_type, value, connection, prepared=False):
-        if lookup_type == 'contains':
+        if lookup_type in ['contains', 'in']:
             value = self.get_prep_value(value)
             return [value]
         

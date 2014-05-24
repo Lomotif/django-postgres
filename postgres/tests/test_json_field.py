@@ -56,3 +56,28 @@ class TestJSONFieldLookups(TestCase):
         b = JSONFieldModel.objects.create(json={'b': 1})
         results = JSONFieldModel.objects.filter(json__has_key='a')
         self.assertEquals(set([a]), set(results))
+    
+    def test_in(self):
+        a = JSONFieldModel.objects.create(json={'a': 1})
+        b = JSONFieldModel.objects.create(json={'b': 1})
+        
+        results = JSONFieldModel.objects.filter(json__in={'a': 1, 'b': 1})
+        self.assertEquals(set([a, b]), set(results))
+        
+        results = JSONFieldModel.objects.filter(json__in={'a': 1, 'b': 2})
+        self.assertEquals(set([a]), set(results))
+    
+    def test_any_keys(self):
+        a = JSONFieldModel.objects.create(json={'a': 1})
+        b = JSONFieldModel.objects.create(json={'b': 1})
+        
+        results = JSONFieldModel.objects.filter(json__any_keys=['a', 'c'])
+        self.assertEquals(set([a]), set(results))
+        
+    def test_all_keys(self):
+        a = JSONFieldModel.objects.create(json={'a': 1})
+        b = JSONFieldModel.objects.create(json={'b': 1})
+        
+        results = JSONFieldModel.objects.filter(json__all_keys=['a', 'b'])
+        self.assertEquals(set([]), set(results))
+        
