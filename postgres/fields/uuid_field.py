@@ -55,3 +55,5 @@ class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
             raise ValidationError(*exc.args)
 
 
+# Lookups for UUIDField.
+# Which ones acutally make sense? Any that we need to handle custom?
