@@ -84,40 +84,47 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
         return self.to_python(self.get_prep_value(value))
 
 
-from django.db.models import lookups, Lookup
+from django.db.models.lookups import BuiltinLookup, Lookup
 
-
-class HasKey(Lookup):
-    lookup_name = 'has_key'
+class PostgresLookup(BuiltinLookup):
+    def process_lhs(self, qn, connection, lhs=None):
+        lhs = lhs or self.lhs
+        return qn.compile(lhs)
     
-    def as_sql(self, qn, connection):
-        lhs, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
-        params = lhs_params + rhs_params
-        
-        return '%s ? %s' % (lhs, rhs), params
+    def get_rhs_op(self, connection, rhs):
+        return '%s %s' % (self.operator, rhs)
+
+class HasKey(PostgresLookup):
+    lookup_name = 'has_key'
+    operator = '?'
 
 JSONField.register_lookup(HasKey)
 
 
-class Contains(Lookup):
+class Contains(PostgresLookup):
     lookup_name = 'contains'
+    operator = '@>'
     
-    def as_sql(self, qn, connection):
-        lhs, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
-        params = lhs_params + rhs_params
-        
-        return '%s @> %s' % (lhs, rhs), params
-
 JSONField.register_lookup(Contains)
 
+class In(PostgresLookup):
+    lookup_name = 'in'
+    operator = '<@'
 
-# Other lookups:
+JSONField.register_lookup(In)
 
-# in            <@
-# all_keys      ?&
-# any_keys      ?|
+class AllKeys(PostgresLookup):
+    lookup_name = 'all_keys'
+    operator = '?&'
+
+JSONField.register_lookup(AllKeys)
+
+class AnyKeys(PostgresLookup):
+    lookup_name = 'any_keys'
+    operator = '?|'
+
+JSONField.register_lookup(AnyKeys)
+
 
 def default(o):
     if hasattr(o, 'to_json'):
