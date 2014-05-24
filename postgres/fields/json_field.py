@@ -112,6 +112,13 @@ class Contains(Lookup):
 
 JSONField.register_lookup(Contains)
 
+
+# Other lookups:
+
+# in            <@
+# all_keys      ?&
+# any_keys      ?|
+
 def default(o):
     if hasattr(o, 'to_json'):
         return o.to_json()
