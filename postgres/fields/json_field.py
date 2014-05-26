@@ -84,12 +84,21 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
         return self.to_python(self.get_prep_value(value))
     
     def get_transform(self, name):
-        try:
-            name = int(name)
-        except ValueError:
-            pass
+        # Hmm. This could mask typos in filters. However, there really
+        # doesn't seem to be any other way to do it.
         
-        return GetTransform(name)
+        if '_' in name:
+            path = '{%s}' % ','.join(name.split('_'))
+            return PathTransform(path)
+            
+        else:
+            
+            try:
+                name = int(name)
+            except ValueError:
+                pass
+        
+            return GetTransform(name)
 
 
 from django.db.models.lookups import BuiltinLookup, Transform
@@ -141,7 +150,15 @@ class Get(Transform):
         
     def as_sql(self, qn, connection):
         lhs, params = qn.compile(self.lhs)
-        return '%s -> %s' % (lhs, self.name), params
+        if isinstance(self.name, six.string_types):
+            # Also filter on objects.
+            filter_to = "%s @> '{}' AND" % lhs
+            self.name = "'%s'" % self.name
+        elif isinstance(self.name, int):
+            # Also filter on arrays.
+            filter_to = "%s @> '[]' AND" % lhs
+        
+        return '%s %s -> %s' % (filter_to, lhs, self.name), params
 
 class GetTransform(object):
     def __init__(self, name):
@@ -149,6 +166,24 @@ class GetTransform(object):
     
     def __call__(self, *args, **kwargs):
         return Get(self.name, *args, **kwargs)
+
+
+class Path(Transform):
+    def __init__(self, path, *args, **kwargs):
+        super(Path, self).__init__(*args, **kwargs)
+        self.path = path
+    
+    def as_sql(self, qn, connection):
+        lhs, params = qn.compile(self.lhs)
+        
+        return "%s #> '%s'" % (lhs, self.path), params
+
+class PathTransform(object):
+    def __init__(self, path):
+        self.path = path
+    
+    def __call__(self, *args, **kwargs):
+        return Path(self.path, *args, **kwargs)
 
 def default(o):
     if hasattr(o, 'to_json'):

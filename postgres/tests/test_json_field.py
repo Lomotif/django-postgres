@@ -86,6 +86,7 @@ class TestJSONFieldLookups(TestCase):
         a = JSONFieldModel.objects.create(json=[{"a":"foo"},{"b":"bar"},{"c":"baz"}])
         b = JSONFieldModel.objects.create(json=[{"a":1},{"b":2},{"c":3}])
         c = JSONFieldModel.objects.create(json=[0,2,4])
+        d = JSONFieldModel.objects.create(json={'a': 1, 'b': {'c': [2, 4, 5]}})
         
         results = JSONFieldModel.objects.filter(json__1={'b': 'bar'})
         self.assertEquals(set([a]), set(results))
@@ -93,8 +94,11 @@ class TestJSONFieldLookups(TestCase):
         results = JSONFieldModel.objects.filter(json__0__lt=2)
         self.assertEquals(set([c]), set(results))
         
-        results = JSONFieldModel.objects.filter(json__0__a__gte=2)
+        results = JSONFieldModel.objects.filter(json__a=1)
+        self.assertEquals(set([d]), set(results))
+        
+        results = JSONFieldModel.objects.filter(json__0_a__gte=2)
         self.assertEquals(0, results.count())
         
-        results = JSONFieldModel.objects.filter(json__0__a__gte=1)
+        results = JSONFieldModel.objects.filter(json__0_a__gte=1)
         self.assertEquals(set([b]), set(results))
