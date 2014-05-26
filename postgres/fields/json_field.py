@@ -84,12 +84,15 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
         return self.to_python(self.get_prep_value(value))
     
     def get_transform(self, name):
+        transform = super(JSONField, self).get_transform(name)
+        if transform:
+            return transform
+        
         # Hmm. This could mask typos in filters. However, there really
         # doesn't seem to be any other way to do it.
-        
         if '_' in name:
             path = '{%s}' % ','.join(name.split('_'))
-            return PathTransform(path)
+            return PathTransformFactory(path)
             
         else:
             
@@ -150,6 +153,9 @@ class Get(Transform):
         
     def as_sql(self, qn, connection):
         lhs, params = qn.compile(self.lhs)
+        # So we can run a query of this type against a column that contains
+        # both array-based and object-based (and possibly scalar) values,
+        # we need to add an additional WHERE clause that ensures we only
         if isinstance(self.name, six.string_types):
             # Also filter on objects.
             filter_to = "%s @> '{}' AND" % lhs
@@ -176,9 +182,9 @@ class Path(Transform):
     def as_sql(self, qn, connection):
         lhs, params = qn.compile(self.lhs)
         
-        return "%s #> '%s'" % (lhs, self.path), params
+        return "({0} @> '[]' OR {0} @> '{}') AND {0} #> '{1}'" % (lhs, self.path), params
 
-class PathTransform(object):
+class PathTransformFactory(object):
     def __init__(self, path):
         self.path = path
     
