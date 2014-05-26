@@ -51,10 +51,10 @@ class TestJSONFieldLookups(TestCase):
         self.assertEquals(1, JSONFieldNullModel.objects.filter(json=None).count())
         self.assertEquals(None, JSONFieldNullModel.objects.get(json=None).json)
     
-    def test_has_key(self):
+    def test_has(self):
         a = JSONFieldModel.objects.create(json={'a': 1})
         b = JSONFieldModel.objects.create(json={'b': 1})
-        results = JSONFieldModel.objects.filter(json__has_key='a')
+        results = JSONFieldModel.objects.filter(json__has='a')
         self.assertEquals(set([a]), set(results))
     
     def test_in(self):
@@ -67,17 +67,34 @@ class TestJSONFieldLookups(TestCase):
         results = JSONFieldModel.objects.filter(json__in={'a': 1, 'b': 2})
         self.assertEquals(set([a]), set(results))
     
-    def test_any_keys(self):
+    def test_has_any(self):
         a = JSONFieldModel.objects.create(json={'a': 1})
         b = JSONFieldModel.objects.create(json={'b': 1})
         
-        results = JSONFieldModel.objects.filter(json__any_keys=['a', 'c'])
+        results = JSONFieldModel.objects.filter(json__has_any=['a', 'c'])
         self.assertEquals(set([a]), set(results))
         
-    def test_all_keys(self):
+    def test_has_all(self):
         a = JSONFieldModel.objects.create(json={'a': 1})
         b = JSONFieldModel.objects.create(json={'b': 1})
         
-        results = JSONFieldModel.objects.filter(json__all_keys=['a', 'b'])
+        results = JSONFieldModel.objects.filter(json__has_all=['a', 'b'])
         self.assertEquals(set([]), set(results))
+
+
+    def test_element_is(self):
+        a = JSONFieldModel.objects.create(json=[{"a":"foo"},{"b":"bar"},{"c":"baz"}])
+        b = JSONFieldModel.objects.create(json=[{"a":1},{"b":2},{"c":3}])
+        c = JSONFieldModel.objects.create(json=[0,2,4])
         
+        results = JSONFieldModel.objects.filter(json__1={'b': 'bar'})
+        self.assertEquals(set([a]), set(results))
+        
+        results = JSONFieldModel.objects.filter(json__0__lt=2)
+        self.assertEquals(set([c]), set(results))
+        
+        results = JSONFieldModel.objects.filter(json__0__a__gte=2)
+        self.assertEquals(0, results.count())
+        
+        results = JSONFieldModel.objects.filter(json__0__a__gte=1)
+        self.assertEquals(set([b]), set(results))

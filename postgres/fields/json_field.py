@@ -82,9 +82,17 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
         # it will come back from the server, which is a good
         # thing.
         return self.to_python(self.get_prep_value(value))
+    
+    def get_transform(self, name):
+        try:
+            name = int(name)
+        except ValueError:
+            pass
+        
+        return GetTransform(name)
 
 
-from django.db.models.lookups import BuiltinLookup, Lookup
+from django.db.models.lookups import BuiltinLookup, Transform
 
 class PostgresLookup(BuiltinLookup):
     def process_lhs(self, qn, connection, lhs=None):
@@ -94,11 +102,11 @@ class PostgresLookup(BuiltinLookup):
     def get_rhs_op(self, connection, rhs):
         return '%s %s' % (self.operator, rhs)
 
-class HasKey(PostgresLookup):
-    lookup_name = 'has_key'
+class Has(PostgresLookup):
+    lookup_name = 'has'
     operator = '?'
 
-JSONField.register_lookup(HasKey)
+JSONField.register_lookup(Has)
 
 
 class Contains(PostgresLookup):
@@ -113,18 +121,34 @@ class In(PostgresLookup):
 
 JSONField.register_lookup(In)
 
-class AllKeys(PostgresLookup):
-    lookup_name = 'all_keys'
+class HasAll(PostgresLookup):
+    lookup_name = 'has_all'
     operator = '?&'
 
-JSONField.register_lookup(AllKeys)
+JSONField.register_lookup(HasAll)
 
-class AnyKeys(PostgresLookup):
-    lookup_name = 'any_keys'
+class HasAny(PostgresLookup):
+    lookup_name = 'has_any'
     operator = '?|'
 
-JSONField.register_lookup(AnyKeys)
+JSONField.register_lookup(HasAny)
 
+
+class Get(Transform):
+    def __init__(self, name, *args, **kwargs):
+        super(Get, self).__init__(*args, **kwargs)
+        self.name = name
+        
+    def as_sql(self, qn, connection):
+        lhs, params = qn.compile(self.lhs)
+        return '%s -> %s' % (lhs, self.name), params
+
+class GetTransform(object):
+    def __init__(self, name):
+        self.name = name
+    
+    def __call__(self, *args, **kwargs):
+        return Get(self.name, *args, **kwargs)
 
 def default(o):
     if hasattr(o, 'to_json'):
