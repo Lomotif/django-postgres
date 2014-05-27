@@ -94,14 +94,12 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
             path = '{%s}' % ','.join(name.split('_'))
             return PathTransformFactory(path)
             
-        else:
-            
-            try:
-                name = int(name)
-            except ValueError:
-                pass
+        try:
+            name = int(name)
+        except ValueError:
+            pass
         
-            return GetTransform(name)
+        return GetTransform(name)
 
 
 from django.db.models.lookups import BuiltinLookup, Transform
