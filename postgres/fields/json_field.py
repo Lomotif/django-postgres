@@ -90,9 +90,9 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
         
         # Hmm. This could mask typos in filters. However, there really
         # doesn't seem to be any other way to do it.
-        if '_' in name:
-            path = '{%s}' % ','.join(name.split('_'))
-            return PathTransformFactory(path)
+        # if '_' in name:
+        #     path = '{%s}' % ','.join(name.split('_'))
+        #     return PathTransformFactory(path)
             
         try:
             name = int(name)
@@ -180,7 +180,7 @@ class Path(Transform):
     def as_sql(self, qn, connection):
         lhs, params = qn.compile(self.lhs)
         
-        return "({0} @> '[]' OR {0} @> '{}') AND {0} #> '{1}'" % (lhs, self.path), params
+        return "({0} @> '[]' OR {0} @> '{{}}') AND {0} #> '{1}'".format(lhs, self.path), params
 
 class PathTransformFactory(object):
     def __init__(self, path):

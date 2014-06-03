@@ -15,3 +15,4 @@ class UUIDFieldModel(models.Model):
 
 class UUIDFieldPKModel(models.Model):
     uuid = uuid_field.UUIDField(primary_key=True)
+
