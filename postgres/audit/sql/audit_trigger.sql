@@ -12,6 +12,11 @@
 --
 -- Should really be converted into a relocatable EXTENSION, with control and upgrade files.
 
+CREATE SCHEMA IF NOT EXISTS __audit;
+-- We store the functions in a schema called __audit, but the actual
+-- audit logs go into the current schema. Don't know if that's the best
+-- idea or not at this stage.
+
 --
 -- Audited data. Lots of information is available, it's just a matter of how much
 -- you really want to record. See:
@@ -49,6 +54,7 @@ CREATE TABLE __audit_logged_actions (
     statement_only boolean not null,
     app_user_id integer,
     app_ip_address inet
+    -- pk integer not null
 );
 
 REVOKE ALL ON __audit_logged_actions FROM public;
@@ -71,6 +77,8 @@ COMMENT ON COLUMN __audit_logged_actions.action IS 'Action type; I = insert, D =
 COMMENT ON COLUMN __audit_logged_actions.row_data IS 'Record value. Null for statement-level trigger. For INSERT this is the new tuple. For DELETE and UPDATE it is the old tuple.';
 COMMENT ON COLUMN __audit_logged_actions.changed_fields IS 'New values of fields changed by UPDATE. Null except for row-level UPDATE events.';
 COMMENT ON COLUMN __audit_logged_actions.statement_only IS '''t'' if audit event is from an FOR EACH STATEMENT trigger, ''f'' for FOR EACH ROW';
+COMMENT ON COLUMN __audit_logged_actions.app_user_id IS '';
+COMMENT ON COLUMN __audit_logged_actions.app_ip_address IS '';
 
 CREATE INDEX logged_actions_relid_idx ON __audit_logged_actions(relid);
 CREATE INDEX logged_actions_action_tstamp_tx_stm_idx ON __audit_logged_actions(action_tstamp_stm);
@@ -110,6 +118,7 @@ BEGIN
         'f'                                           -- statement_only
       );
     
+    -- Inject the data from the _app_user table if it exists.
     BEGIN
       PERFORM 
         n.nspname, c.relname 
