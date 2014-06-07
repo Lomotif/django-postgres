@@ -52,6 +52,7 @@ CREATE TABLE __audit_logged_actions (
     row_data jsonb,
     changed_fields jsonb,
     statement_only boolean not null,
+    object_key text,
     app_user_id integer,
     app_ip_address inet
     -- pk integer not null
@@ -120,24 +121,11 @@ BEGIN
     
     -- Inject the data from the _app_user table if it exists.
     BEGIN
-      PERFORM 
-        n.nspname, c.relname 
-      FROM
-        pg_catalog.pg_class c 
-      LEFT JOIN 
-        pg_catalog.pg_namespace n
-      ON n.oid = c.relnamespace
-      WHERE
-        n.nspname like 'pg_temp_%' 
-      AND
-        c.relname = '_app_user';
-    
-      IF FOUND THEN
-        FOR r IN SELECT * FROM _app_user LIMIT 1 LOOP
+      FOR r IN SELECT * FROM _app_user LIMIT 1 LOOP
           audit_row.app_user_id = r.user_id;
           audit_row.app_ip_address = r.ip_address;
-        END LOOP;
-        END IF;
+      END LOOP;
+    EXCEPTION WHEN OTHERS THEN
     END;
     
     IF NOT TG_ARGV[0]::boolean IS DISTINCT FROM 'f'::boolean THEN
@@ -149,9 +137,12 @@ BEGIN
     END IF;
     
     IF (TG_OP = 'UPDATE' AND TG_LEVEL = 'ROW') THEN
+        -- Convert our table to a json structure.
         audit_row.row_data = to_json(OLD.*);
-        audit_row.changed_fields =  to_json(NEW.*) - audit_row.row_data - excluded_cols;
-        IF audit_row.changed_fields <@ audit_row.row_data THEN
+        -- Remove any columns we want to exclude, and then any
+        -- columns that still have the same value as before the update.
+        audit_row.changed_fields =  to_json(NEW.*) - excluded_cols - audit_row.row_data;
+        IF audit_row.changed_fields = '{}'::jsonb THEN
             -- All changed fields are ignored. Skip this update.
             RETURN NULL;
         END IF;
@@ -206,7 +197,7 @@ of the audit trigger its self.
 
 If a (temporary, probably) table exists called _app_user, then this will supply
 a user_id and ip_address that will be added to the log. This allows for you
-to associate edits with application, rather than database users.
+to associate events with application level, rather than database users.
 $body$;
 
 
@@ -221,6 +212,11 @@ BEGIN
     EXECUTE 'DROP TRIGGER IF EXISTS audit_trigger_stm ON ' || target_table;
 
     IF audit_rows THEN
+        -- It would be nice to supply a WHEN clause to the trigger,
+        -- but that would mean that adding new columns to the table
+        -- means these would not be audited, until the trigger was
+        -- reapplied. Perhaps an "ONLY COLUMNS..." version of this
+        -- function?
         IF array_length(ignored_cols,1) > 0 THEN
             _ignored_cols_snip = ', ' || quote_literal(ignored_cols);
         END IF;
@@ -228,7 +224,7 @@ BEGIN
                  target_table || 
                  ' FOR EACH ROW EXECUTE PROCEDURE __audit_if_modified_func(' ||
                  quote_literal(audit_query_text) || _ignored_cols_snip || ');';
-        RAISE NOTICE '%',_q_txt;
+        -- RAISE NOTICE '%',_q_txt;
         EXECUTE _q_txt;
         stm_targets = 'TRUNCATE';
     ELSE
@@ -238,7 +234,7 @@ BEGIN
              target_table ||
              ' FOR EACH STATEMENT EXECUTE PROCEDURE __audit_if_modified_func('||
              quote_literal(audit_query_text) || ');';
-    RAISE NOTICE '%',_q_txt;
+    -- RAISE NOTICE '%',_q_txt;
     EXECUTE _q_txt;
 
 END;

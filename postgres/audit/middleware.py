@@ -1,10 +1,13 @@
 from django.db import connection
 
-SET_USER = """
-CREATE TEMP TABLE IF NOT EXISTS "_app_user" (user_id integer, ip_address inet);
-UPDATE _app_user SET user_id=%(user)s, ip_address='%(host)s';
-INSERT INTO _app_user (user_id, ip_address) 
-    SELECT %(user)s, '%(host)s' WHERE NOT EXISTS (SELECT * FROM _app_user);
+SET_USER = """DO $$
+BEGIN
+  CREATE TEMP TABLE "_app_user" (user_id integer, ip_address inet);
+  INSERT INTO _app_user VALUES (%(user)s, '%(host)s');
+EXCEPTION WHEN OTHERS THEN
+  UPDATE _app_user SET user_id=%(user)s, ip_address='%(host)s';
+END;
+$$;
 """
 
 class AuditAppUserMiddleware(object):
