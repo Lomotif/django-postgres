@@ -2,6 +2,8 @@ from django.conf import settings
 from django.db import models, connection
 
 import postgres.fields.json_field
+import postgres.fields.internal_types
+import postgres.fields.bigint_field
 
 known_models = {}
 
@@ -54,29 +56,24 @@ class AuditLog(models.Model):
     underlying system create a read-only view so any saves fail.
     """
     
-    event_id = models.IntegerField(primary_key=True)
     action = models.TextField(choices=[
         ('I', 'INSERT'),
         ('U', 'UPDATE'),
         ('D', 'DELETE'),
         ('T', 'TRUNCATE'),
-    ])
+    ], db_index=True)
     table_name = models.TextField()
-    schema_name = models.TextField()
-    timestamp = models.DateTimeField(db_column='action_tstamp_tx')
+    relid = postgres.fields.internal_types.OIDField()
+    timestamp = models.DateTimeField()
+    transaction_id = postgres.fields.bigint_field.BigIntField(null=True)
+    client_query = models.TextField()
+    statement_only = models.BooleanField(default=False)
     row_data = postgres.fields.json_field.JSONField(null=True)
     changed_fields = postgres.fields.json_field.JSONField(null=True)
     app_user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
     app_ip_address = models.IPAddressField(null=True)
     
     objects = AuditLogQuerySet.as_manager()
-    
-    class Meta:
-        # This signals we should not create tables.
-        # However, in the case of using django-boardinghouse, we probably do
-        # want tables to be created, in each schema...
-        managed = False
-        db_table = '__audit_logged_actions'
     
     @property
     def current_instance(self):
@@ -112,8 +109,3 @@ class AuditLog(models.Model):
         data = dict((key,value) for (key,value) in data.items() if key in fields)
         
         return model(**data)
-
-
-def start_auditing(model):
-    cursor = connection.cursor()
-    cursor.execute('SELECT __audit_audit_table(%s)', model._meta.db_table)
