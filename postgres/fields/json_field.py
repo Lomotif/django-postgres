@@ -193,7 +193,11 @@ def default(o):
     if hasattr(o, 'to_json'):
         return o.to_json()
     if isinstance(o, Decimal):
-        return str(o)
+        # Yes, I am aware of how floats are really not the same as 
+        # Decimal, but we don't want to serialise to a string, because
+        # then we won't be able to deserialise correctly. I'm happy to
+        # look at a better way of doing this...
+        return float(o)
     if isinstance(o, datetime.datetime):
         if o.tzinfo:
             return o.strftime('%Y-%m-%dT%H:%M:%S%z')
