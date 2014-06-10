@@ -58,14 +58,19 @@ BEGIN
         RAISE EXCEPTION '[__audit.if_modified_func] - Trigger func added as trigger for unhandled case: %, %',TG_OP, TG_LEVEL;
         RETURN NULL;
     END IF;
-    INSERT INTO audit_auditlog (
+    
+    EXECUTE 'SET search_path TO ' || TG_TABLE_SCHEMA::text || ',public;';
+    
+    INSERT INTO "audit_auditlog" (
       "action", "table_name",
+      "relid",
       "timestamp", "transaction_id",
       "client_query", "statement_only",
       "row_data", "changed_fields",
       "app_user_id", "app_ip_address"
     ) VALUES (
       substring(TG_OP, 1, 1), TG_TABLE_NAME::text,
+      TG_TABLE_NAME::regclass::oid,
       current_timestamp, txid_current(),
       client_query, statement_only,
       row_data, changed_fields,
@@ -75,8 +80,7 @@ BEGIN
 END;
 $body$
 LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = pg_catalog, public;
+SECURITY DEFINER;
 
 COMMENT ON FUNCTION __audit.if_modified_func() IS $body$
 Track changes to a table at the statement and/or row level.
