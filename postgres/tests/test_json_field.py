@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 from decimal import Decimal
 
 import json
+import datetime
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -14,25 +15,23 @@ class TestJSONField(TestCase):
     def test_json_field_in_model(self):
         created = JSONFieldModel.objects.create(json={'foo': 'bar'})
         fetched = JSONFieldModel.objects.get()
-
         self.assertEquals({'foo': 'bar'}, fetched.json)
 
-    def test_subfield_base(self):
-        obj = JSONFieldModel()
-        obj.json = '{"foo": "bar"}'
-        self.assertEquals({'foo': 'bar'}, obj.json)
-
-        with self.assertRaises(ValidationError):
-            obj.json = '{"foo":}'
-
-        obj.json = '["foo", "bar"]'
-        self.assertEquals(['foo', 'bar'], obj.json)
-
     def test_numeric_as_decimal(self):
-        obj = JSONFieldModel()
-        obj.json = '[1,2,"three",4.0]'
-
+        JSONFieldModel.objects.create(json=[1,2,"three",4.0])
+        obj = JSONFieldModel.objects.get()
         self.assertEquals([1,2,'three',Decimal('4.0')], obj.json)
+
+    def test_date_data(self):
+        JSONFieldModel.objects.create(json=[
+            datetime.date(2001,1,1),
+            datetime.datetime(2002,2,2,2,2,2),
+            datetime.time(3,4,5),
+        ])
+        obj = JSONFieldModel.objects.get()
+        self.assertEquals([
+            '2001-01-01', '2002-02-02T02:02:02', '03:04:05'
+        ], obj.json)
 
 
 class TestJSONFieldLookups(TestCase):

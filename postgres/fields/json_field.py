@@ -11,13 +11,14 @@ from django.utils import six
 
 from psycopg2.extras import register_json
 
+# We can register to have psycopg turn the json data into python dicts/lists.
 register_json(oid=114, array_oid=199)
 # Also register jsonb!
 # http://schinckel.net/2014/05/24/python%2C-postgres-and-jsonb/
 register_json(oid=3802, array_oid=3807)
 
 
-class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
+class JSONField(models.Field):
     description = 'JSON Field'
 
     def __init__(self, *args, **kwargs):
@@ -25,7 +26,7 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
             'parse_float': decimal.Decimal
         })
         self.encode_kwargs = kwargs.pop('encode_kwargs', {
-            'cls': DjangoJSONEncoder
+            'cls': DjangoJSONEncoder,
         })
         super(JSONField, self).__init__(*args, **kwargs)
 
@@ -68,22 +69,9 @@ class JSONField(six.with_metaclass(models.SubfieldBase, models.Field)):
         return super(JSONField, self).get_db_prep_lookup(lookup_type, value, connection, prepared)
 
     def to_python(self, value):
-        if isinstance(value, six.string_types) or value is None:
-            if not value:
-                if self.blank:
-                    return ''
-                return None
-            try:
-                return json.loads(value, **self.decode_kwargs)
-            except ValueError as exc:
-                raise ValidationError(*exc.args)
-
-        # Should we round-trip a value when it is assigned?
-        # It means we will always have data in the format that
-        # it will come back from the server, which is a good
-        # thing.
+        if value is None and not self.null and self.blank:
+            return ''
         return value
-        return self.to_python(self.get_prep_value(value))
 
     def get_transform(self, name):
         transform = super(JSONField, self).get_transform(name)
@@ -161,7 +149,9 @@ class Get(Transform):
         # So we can run a query of this type against a column that contains
         # both array-based and object-based (and possibly scalar) values,
         # we need to add an additional WHERE clause that ensures we only
-        # get json objects/arrays.
+        # get json objects/arrays, as per the input type.
+        # It would be really nice to be able to see if these clauses
+        # have already been applied.
         if isinstance(self.name, six.string_types):
             # Also filter on objects.
             filter_to = "%s @> '{}' AND" % lhs
@@ -187,6 +177,8 @@ class Path(Transform):
 
     def as_sql(self, qn, connection):
         lhs, params = qn.compile(self.lhs)
+        # Because path operations only work on non-scalar types, we
+        # need to filter out scalar types as part of the query.
         return "({0} @> '[]' OR {0} @> '{{}}') AND {0} #> '{1}'".format(lhs, self.path), params
 
 
