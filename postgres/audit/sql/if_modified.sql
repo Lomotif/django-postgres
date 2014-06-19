@@ -9,7 +9,7 @@ DECLARE
     r record;
     row_data jsonb;
     changed_fields jsonb;
-    
+
     app_user_id INTEGER;
     app_ip_address inet;
     client_query TEXT;
@@ -18,7 +18,7 @@ BEGIN
     IF TG_WHEN <> 'AFTER' THEN
         RAISE EXCEPTION '__audit.if_modified_func() may only run as an AFTER trigger';
     END IF;
-    
+
     -- Inject the data from the _app_user table if it exists.
     BEGIN
       FOR r IN SELECT * FROM _app_user LIMIT 1 LOOP
@@ -27,7 +27,7 @@ BEGIN
       END LOOP;
     EXCEPTION WHEN OTHERS THEN
     END;
-    
+
     IF TG_ARGV[0]::boolean IS DISTINCT FROM 'f'::boolean THEN
       client_query = current_query();
     ELSE
@@ -37,7 +37,7 @@ BEGIN
     IF TG_ARGV[1] IS NOT NULL THEN
         excluded_cols = TG_ARGV[1]::text[];
     END IF;
-    
+
     IF (TG_OP = 'UPDATE' AND TG_LEVEL = 'ROW') THEN
         -- Convert our table to a json structure.
         row_data = to_json(OLD.*);
@@ -58,9 +58,9 @@ BEGIN
         RAISE EXCEPTION '[__audit.if_modified_func] - Trigger func added as trigger for unhandled case: %, %',TG_OP, TG_LEVEL;
         RETURN NULL;
     END IF;
-    
-    EXECUTE 'SET search_path TO ' || TG_TABLE_SCHEMA::text || ',public;';
-    
+
+    EXECUTE 'SET search_path TO ' || TG_TABLE_SCHEMA::text || ',public,__audit;';
+
     INSERT INTO "audit_auditlog" (
       "action", "table_name",
       "relid",
