@@ -71,6 +71,7 @@ class JSONField(models.Field):
     def to_python(self, value):
         if value is None and not self.null and self.blank:
             return ''
+        # Rely on psycopg2 to give us the value already converted.
         return value
 
     def get_transform(self, name):

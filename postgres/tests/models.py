@@ -4,7 +4,7 @@ import json
 
 from django.db import models
 
-from postgres.fields import uuid_field, json_field
+from postgres.fields import uuid_field, json_field, interval_field
 
 class JSONFieldModel(models.Model):
     json = json_field.JSONField()
@@ -29,3 +29,7 @@ class UUIDFieldPKModel(models.Model):
 
     def __unicode__(self):
         return unicode(self.uuid)
+
+
+class IntervalFieldModel(models.Model):
+    interval = interval_field.IntervalField()
