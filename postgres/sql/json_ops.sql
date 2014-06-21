@@ -40,11 +40,13 @@ SELECT COALESCE(
 )::json
 $function$;
 
+DROP OPERATOR IF EXISTS || (json, json);
+DROP OPERATOR IF EXISTS || (json, jsonb);
 CREATE OPERATOR || (LEFTARG = json, RIGHTARG = json, PROCEDURE = json_concatenate);
 CREATE OPERATOR || (LEFTARG = json, RIGHTARG = jsonb, PROCEDURE = json_concatenate);
 
 
-CREATE OR REPLACE FUNCTION "json_concatenate"(
+CREATE OR REPLACE FUNCTION "jsonb_concatenate"(
   "json" jsonb,
   "other" json
 )
@@ -63,7 +65,7 @@ SELECT COALESCE(
 $function$;
 
 
-CREATE OR REPLACE FUNCTION "json_concatenate"(
+CREATE OR REPLACE FUNCTION "jsonb_concatenate"(
   "json" jsonb,
   "other" jsonb
 )
@@ -81,8 +83,10 @@ SELECT COALESCE(
 )::jsonb
 $function$;
 
-CREATE OPERATOR || (LEFTARG = jsonb, RIGHTARG = json, PROCEDURE = json_concatenate);
-CREATE OPERATOR || (LEFTARG = jsonb, RIGHTARG = jsonb, PROCEDURE = json_concatenate);
+DROP OPERATOR IF EXISTS || (jsonb, json);
+DROP OPERATOR IF EXISTS || (jsonb, jsonb);
+CREATE OPERATOR || (LEFTARG = jsonb, RIGHTARG = json, PROCEDURE = jsonb_concatenate);
+CREATE OPERATOR || (LEFTARG = jsonb, RIGHTARG = jsonb, PROCEDURE = jsonb_concatenate);
 
 
 
@@ -124,11 +128,13 @@ SELECT COALESCE(
 )::jsonb::json
 $function$;
 
+DROP OPERATOR IF EXISTS #= (json, json);
+DROP OPERATOR IF EXISTS #= (json, jsonb);
 CREATE OPERATOR #= (LEFTARG = json, RIGHTARG = json, PROCEDURE = json_update_only_if_present);
 CREATE OPERATOR #= (LEFTARG = json, RIGHTARG = jsonb, PROCEDURE = json_update_only_if_present);
 
 
-CREATE OR REPLACE FUNCTION "json_update_only_if_present"(
+CREATE OR REPLACE FUNCTION "jsonb_update_only_if_present"(
   "json" jsonb,
   "other" json
 )
@@ -147,7 +153,7 @@ SELECT COALESCE(
 )::jsonb
 $function$;
 
-CREATE OR REPLACE FUNCTION "json_update_only_if_present"(
+CREATE OR REPLACE FUNCTION "jsonb_update_only_if_present"(
   "json" jsonb,
   "other" jsonb
 )
@@ -166,8 +172,10 @@ SELECT COALESCE(
 )::jsonb
 $function$;
 
-CREATE OPERATOR #= (LEFTARG = jsonb, RIGHTARG = json, PROCEDURE = json_update_only_if_present);
-CREATE OPERATOR #= (LEFTARG = jsonb, RIGHTARG = jsonb, PROCEDURE = json_update_only_if_present);
+DROP OPERATOR IF EXISTS #= (jsonb, json);
+DROP OPERATOR IF EXISTS #= (jsonb, jsonb);
+CREATE OPERATOR #= (LEFTARG = jsonb, RIGHTARG = json, PROCEDURE = jsonb_update_only_if_present);
+CREATE OPERATOR #= (LEFTARG = jsonb, RIGHTARG = jsonb, PROCEDURE = jsonb_update_only_if_present);
 
 
 CREATE OR REPLACE FUNCTION "json_object_values"(
@@ -180,6 +188,19 @@ CREATE OR REPLACE FUNCTION "json_object_values"(
 AS $function$
 
 SELECT value FROM json_each("json");
+
+$function$;
+
+CREATE OR REPLACE FUNCTION "jsonb_object_values"(
+  "json" jsonb
+)
+  RETURNS SETOF jsonb
+  LANGUAGE sql
+  IMMUTABLE
+  STRICT
+AS $function$
+
+SELECT value FROM jsonb_each("json");
 
 $function$;
 
@@ -260,6 +281,10 @@ SELECT COALESCE(
 $function$;
 
 
+DROP OPERATOR IF EXISTS - (json, text);
+DROP OPERATOR IF EXISTS - (json, text[]);
+DROP OPERATOR IF EXISTS - (json, json);
+DROP OPERATOR IF EXISTS - (json, jsonb);
 CREATE OPERATOR - (LEFTARG = json, RIGHTARG = text, PROCEDURE = json_subtract);
 CREATE OPERATOR - (LEFTARG = json, RIGHTARG = text[], PROCEDURE = json_subtract);
 CREATE OPERATOR - (LEFTARG = json, RIGHTARG = json, PROCEDURE = json_subtract);
@@ -268,7 +293,7 @@ CREATE OPERATOR - (LEFTARG = json, RIGHTARG = jsonb, PROCEDURE = json_subtract);
 -- Operator: -
 -- ARG[0], RETURN jsonb
 
-CREATE OR REPLACE FUNCTION "json_subtract"(
+CREATE OR REPLACE FUNCTION "jsonb_subtract"(
   "json" jsonb,
   "remove" TEXT
 )
@@ -286,7 +311,7 @@ SELECT COALESCE(
 $function$;
 
 
-CREATE OR REPLACE FUNCTION "json_subtract"(
+CREATE OR REPLACE FUNCTION "jsonb_subtract"(
   "json" jsonb,
   "keys" TEXT[]
 )
@@ -304,7 +329,7 @@ SELECT COALESCE(
 $function$;
 
 
-CREATE OR REPLACE FUNCTION "json_subtract"(
+CREATE OR REPLACE FUNCTION "jsonb_subtract"(
   "json" jsonb,
   "remove" json
 )
@@ -322,7 +347,7 @@ SELECT COALESCE(
 $function$;
 
 
-CREATE OR REPLACE FUNCTION "json_subtract"(
+CREATE OR REPLACE FUNCTION "jsonb_subtract"(
   "json" jsonb,
   "remove" jsonb
 )
@@ -340,7 +365,11 @@ SELECT COALESCE(
 $function$;
 
 
-CREATE OPERATOR - (LEFTARG = jsonb, RIGHTARG = text, PROCEDURE = json_subtract);
-CREATE OPERATOR - (LEFTARG = jsonb, RIGHTARG = text[], PROCEDURE = json_subtract);
-CREATE OPERATOR - (LEFTARG = jsonb, RIGHTARG = json, PROCEDURE = json_subtract);
-CREATE OPERATOR - (LEFTARG = jsonb, RIGHTARG = jsonb, PROCEDURE = json_subtract);
+DROP OPERATOR IF EXISTS - (jsonb, text);
+DROP OPERATOR IF EXISTS - (jsonb, text[]);
+DROP OPERATOR IF EXISTS - (jsonb, json);
+DROP OPERATOR IF EXISTS - (jsonb, jsonb);
+CREATE OPERATOR - (LEFTARG = jsonb, RIGHTARG = text, PROCEDURE = jsonb_subtract);
+CREATE OPERATOR - (LEFTARG = jsonb, RIGHTARG = text[], PROCEDURE = jsonb_subtract);
+CREATE OPERATOR - (LEFTARG = jsonb, RIGHTARG = json, PROCEDURE = jsonb_subtract);
+CREATE OPERATOR - (LEFTARG = jsonb, RIGHTARG = jsonb, PROCEDURE = jsonb_subtract);

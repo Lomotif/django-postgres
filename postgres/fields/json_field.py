@@ -11,12 +11,12 @@ from django.utils import six
 
 from psycopg2.extras import register_json
 
-# We can register to have psycopg turn the json data into python dicts/lists.
-register_json(oid=114, array_oid=199)
-# Also register jsonb!
+# We can register jsonb to be loaded as json!
 # http://schinckel.net/2014/05/24/python%2C-postgres-and-jsonb/
 register_json(oid=3802, array_oid=3807)
-
+# However, it may be that we want to use specific decoding on
+# the json object... which if we wanted to do it on a per-field
+# basis, we'd need to not have run that line.
 
 class JSONField(models.Field):
     description = 'JSON Field'
@@ -53,6 +53,7 @@ class JSONField(models.Field):
             if not isinstance(value, six.string_types):
                 value = '%s' % value
         if lookup_type in ['all_keys', 'any_keys']:
+            # This lookup type needs a list of strings.
             if isinstance(value, six.string_types):
                 value = [value]
             # This will cast numbers to strings, but also grab the keys
