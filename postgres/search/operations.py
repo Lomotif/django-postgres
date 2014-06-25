@@ -28,7 +28,7 @@ def get_current_view_definition():
     cursor.execute("SELECT definition FROM pg_views WHERE viewname='search_search'")
     view = cursor.fetchone()
     if view:
-        return view[0].rstrip(';').split('UNION')
+        return view[0].rstrip(';').split('UNION ALL')
     return []
 
 def updated_view_definition(data):
@@ -43,7 +43,7 @@ def updated_view_definition(data):
     if not found:
         queries.append(QUERY % data)
 
-    return CREATE_VIEW % ('\nUNION\n'.join(queries))
+    return CREATE_VIEW % ('\nUNION ALL\n'.join(queries))
 
 
 class SearchModel(Operation):
@@ -62,9 +62,9 @@ class SearchModel(Operation):
                 '%s.%s' % (table, column)
                 for column in search_columns
             ]),
-            'title': title if "'" in title else "%s.%s" % (table, title),
-            'detail': detail if "'" in detail else "%s.%s" % (table, detail),
-            'url_name': "'%s'" % url_name, # Always a quoted string?
+            'title': "%s::text" % title if "'" in title else "%s.%s" % (table, title),
+            'detail': "%s::text" % detail if "'" in detail else "%s.%s" % (table, detail),
+            'url_name': "'%s'::text" % url_name, # Always a quoted string?
             'url_kwargs':', '.join([
                 "'%s', %s.%s" % (name, table, field)
                 for name,field in url_kwargs.items()
@@ -86,4 +86,4 @@ class SearchModel(Operation):
         pass
 
     def database_backwards(self, app_label, schema_editor, from_state, to_state):
-        schema_editor.execute('DROP VIEW search_search;')
+        schema_editor.execute('DROP VIEW IF EXISTS search_search;')
