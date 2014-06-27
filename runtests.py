@@ -5,6 +5,11 @@ import os, sys
 from django.conf import settings
 import django
 
+try:
+    from psycopg2cffi import compat
+    compat.register()
+except ImportError:
+    pass
 
 DEFAULT_SETTINGS = dict(
     INSTALLED_APPS=(
@@ -17,6 +22,7 @@ DEFAULT_SETTINGS = dict(
             "NAME": "postgres-fields",
         }
     },
+    MIDDLEWARE_CLASSES=()
 )
 
 

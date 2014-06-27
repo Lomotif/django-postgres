@@ -9,7 +9,7 @@ CREATE_VIEW = """CREATE OR REPLACE VIEW search_search AS
 QUERY = """SELECT
     %(table)s.id AS id,
     to_tsvector(%(search_columns)s) AS term,
-    %(title)s AS title,
+    %(title)s::text AS title,
     %(detail)s AS detail,
     %(url_name)s AS url_name,
     json_build_object(%(url_kwargs)s)::jsonb AS url_kwargs
