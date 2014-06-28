@@ -35,7 +35,7 @@ def updated_view_definition(data):
     queries = get_current_view_definition()
     found = False
     for i,query in enumerate(queries):
-        if inspect_query(query) == data['table']:
+        if inspect_query(query)['table'] == data['table']:
             queries[i] = QUERY % data
             found = True
             break
@@ -45,11 +45,12 @@ def updated_view_definition(data):
 
     return CREATE_VIEW % ('\nUNION ALL\n'.join(queries))
 
+
 def removed_view_definition(data):
-    return [
+    return CREATE_VIEW %  '\nUNION ALL\n'.join([
         query for query in get_current_view_definition()
-        if inspect_query(query) != data['table']
-    ]
+        if inspect_query(query)['table'] != data['table']
+    ])
 
 
 class SearchModel(Operation):
