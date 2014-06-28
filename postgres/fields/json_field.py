@@ -69,6 +69,15 @@ class JSONField(models.Field):
 
         return super(JSONField, self).get_db_prep_lookup(lookup_type, value, connection, prepared)
 
+    def deconstruct(self):
+        name, path, args, kwargs = super(JSONField, self).deconstruct()
+        path = 'postgres.fields.JSONField'
+        kwargs.update(
+            decode_kwargs=self.decode_kwargs,
+            encode_kwargs=self.encode_kwargs
+        )
+        return name, path, args, kwargs
+
     def to_python(self, value):
         if value is None and not self.null and self.blank:
             return ''
@@ -90,11 +99,6 @@ class JSONField(models.Field):
             pass
 
         return GetTransform(name)
-
-
-class JSONBField(JSONField):
-    def db_type(self, connection):
-        return 'jsonb'
 
 
 class PostgresLookup(BuiltinLookup):

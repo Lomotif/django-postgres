@@ -17,7 +17,7 @@ FROM
     %(table)s
 """
 
-QUERY_RE = re.compile(r'^ +SELECT (?P<columns>.*) FROM (?P<table>[^\n\t ]*)', re.DOTALL)
+QUERY_RE = re.compile(r'^\W+SELECT (?P<columns>.*) FROM (?P<table>[^\n\t ]*)', re.DOTALL)
 
 def inspect_query(query):
     return QUERY_RE.match(query).groupdict()
@@ -44,6 +44,12 @@ def updated_view_definition(data):
         queries.append(QUERY % data)
 
     return CREATE_VIEW % ('\nUNION ALL\n'.join(queries))
+
+def removed_view_definition(data):
+    return [
+        query for query in get_current_view_definition()
+        if inspect_query(query) != data['table']
+    ]
 
 
 class SearchModel(Operation):
@@ -86,4 +92,6 @@ class SearchModel(Operation):
         pass
 
     def database_backwards(self, app_label, schema_editor, from_state, to_state):
-        schema_editor.execute('DROP VIEW IF EXISTS search_search;')
+        # We want to remove our table from the view definition.
+        sql = removed_view_definition(self.data)
+        schema_editor.execute(sql)
