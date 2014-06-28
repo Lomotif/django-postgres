@@ -10,6 +10,11 @@ END;
 $$;
 """
 
+_SET_USER = """
+CREATE TEMP TABLE "_app_user"
+AS SELECT %(user)s AS user_id, '%(host)s'::inet AS ip_address;
+"""
+
 class AuditAppUserMiddleware(object):
     def process_view(self, request, *args, **kwargs):
         cursor = connection.cursor()
