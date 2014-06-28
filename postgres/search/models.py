@@ -1,13 +1,14 @@
 from django.db import models
 
-from postgres.fields import json_field
+import postgres.fields
+
 
 class Search(models.Model):
-    term = models.TextField()
+    term = postgres.fields.TSVectorField()
     title = models.TextField()
     detail = models.TextField()
     url_name = models.TextField()
-    url_kwargs = json_field.JSONField()
+    url_kwargs = postgres.fields.JSONField()
     # url_name?
 
     class Meta:

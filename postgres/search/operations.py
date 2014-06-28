@@ -6,9 +6,10 @@ from django.db.migrations.operations.base import Operation
 CREATE_VIEW = """CREATE OR REPLACE VIEW search_search AS
 %s
 """
+
 QUERY = """SELECT
     %(table)s.id AS id,
-    to_tsvector(%(search_columns)s) AS term,
+    %(search_columns)s AS term,
     %(title)s::text AS title,
     %(detail)s AS detail,
     %(url_name)s AS url_name,
@@ -25,10 +26,11 @@ def inspect_query(query):
 
 def get_current_view_definition():
     cursor = connection.cursor()
-    cursor.execute("SELECT definition FROM pg_views WHERE viewname='search_search'")
+    cursor.execute("SELECT schemaname, definition FROM pg_views WHERE viewname='search_search' LIMIT 1")
     view = cursor.fetchone()
     if view:
-        return view[0].rstrip(';').split('UNION ALL')
+        # Replace all of the schemaname.tablename bits by just tablename.
+        return view[1].replace('FROM %s.' % view[0], 'FROM ').rstrip(';').split('UNION ALL')
     return []
 
 def updated_view_definition(data):
@@ -47,10 +49,14 @@ def updated_view_definition(data):
 
 
 def removed_view_definition(data):
-    return CREATE_VIEW %  '\nUNION ALL\n'.join([
+    queries = [
         query for query in get_current_view_definition()
         if inspect_query(query)['table'] != data['table']
-    ])
+    ]
+    if not queries:
+        return 'DROP VIEW IF EXISTS search_search'
+
+    return CREATE_VIEW %  '\nUNION ALL\n'.join(queries)
 
 
 class SearchModel(Operation):
@@ -65,8 +71,8 @@ class SearchModel(Operation):
         url_kwargs = url_kwargs or {'pk': 'id'}
         self.data = {
             'table': table,
-            'search_columns': " || ' ' || ".join([
-                '%s.%s' % (table, column)
+            'search_columns': " || ".join([
+                'to_tsvector(%s.%s::text)' % (table, column)
                 for column in search_columns
             ]),
             'title': "%s::text" % title if "'" in title else "%s.%s" % (table, title),
