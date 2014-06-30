@@ -26,12 +26,9 @@ class FormListView(FormMixin, ListView):
 
     def get(self, request, *args, **kwargs):
         form = self.get_form(self.get_form_class())
-        context = {
-            'form': form
-        }
         if form.is_valid():
             self.object_list = form.get_queryset()
         else:
             self.object_list = []
-        context.update(**self.get_context_data())
+        context = self.get_context_data({'form': form})
         return self.render_to_response(context)
