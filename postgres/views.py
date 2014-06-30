@@ -30,5 +30,5 @@ class FormListView(FormMixin, ListView):
             self.object_list = form.get_queryset()
         else:
             self.object_list = []
-        context = self.get_context_data({'form': form})
+        context = self.get_context_data(form=form)
         return self.render_to_response(context)

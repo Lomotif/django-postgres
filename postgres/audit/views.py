@@ -2,7 +2,7 @@ from django.core.paginator import Paginator
 from django.views.generic import TemplateView
 from django.views.generic.edit import FormMixin
 
-from ..mixins import AjaxTemplateMixin, FormListView
+from ..views import AjaxTemplateMixin, FormListView
 from .forms import AuditQueryForm
 
 class AuditQuery(AjaxTemplateMixin, FormListView):
