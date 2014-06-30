@@ -7,7 +7,7 @@ from django.utils.html import conditional_escape as escape
 from .models import Search
 
 def uikit(request):
-    searches = Search.objects.filter(term__matches='%s:*' % request.GET['search'].lower())
+    searches = Search.objects.matches(request.GET['search'])
 
     return HttpResponse(json.dumps({
         'results': [
