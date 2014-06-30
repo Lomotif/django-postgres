@@ -1,0 +1,37 @@
+from django.views.generic.edit import FormMixin
+from django.views.generic import ListView
+
+class AjaxTemplateMixin(object):
+    ajax_template_name = None
+
+    def get_template_names(self):
+        if self.ajax_template_name and self.request.is_ajax():
+            return [self.ajax_template_name]
+        return super(AjaxTemplateMixin, self).get_template_names()
+
+
+class FormListView(FormMixin, ListView):
+    """
+    The query parameters come from the form.
+
+    Only if the form is valid will the queryset be fetched.
+    """
+
+    def get_form_kwargs(self):
+        return {
+            'initial': self.get_initial(),
+            'prefix': self.get_prefix(),
+            'data': self.request.GET or None,
+        }
+
+    def get(self, request, *args, **kwargs):
+        form = self.get_form(self.get_form_class())
+        context = {
+            'form': form
+        }
+        if form.is_valid():
+            self.object_list = form.get_queryset()
+        else:
+            self.object_list = []
+        context.update(**self.get_context_data())
+        return self.render_to_response(context)
