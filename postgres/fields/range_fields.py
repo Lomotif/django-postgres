@@ -2,7 +2,9 @@ from django.db import models
 from django import forms
 from django.utils import six
 
-from psycopg2._range import Range, DateRange
+from psycopg2._range import Range, DateRange, NumericRange
+
+from ..forms.range_fields import RangeField as RangeFormField
 
 # Monkey patch Range so that we get a a string that can
 # be used to save.
@@ -18,12 +20,19 @@ Range.__unicode__ = range_to_string
 
 
 class RangeField(models.Field):
-    pass
+    range_type= Range
 
-
+    def formfield(self, **kwargs):
+        defaults = {
+            'form_class': RangeFormField,
+            'range_type': self.range_type
+        }
+        defaults.update(kwargs)
+        return super(RangeField, self).formfield(**defaults)
 
 
 class Int4RangeField(RangeField):
+    range_type = NumericRange
     def db_type(self, connection):
         return 'int4range'
 
