@@ -1,13 +1,13 @@
 from django.db import models
-from django import forms
 from django.utils import six
 
 from psycopg2._range import Range, DateRange, NumericRange
 
-from ..forms.range_fields import RangeField as RangeFormField
+from ..forms import range_fields
 
 # Monkey patch Range so that we get a a string that can
-# be used to save.
+# be used to save. This may go away when we have proper
+# fields.
 def range_to_string(value):
     if value and not isinstance(value, six.string_types):
         lower, upper = value._bounds
@@ -24,7 +24,7 @@ class RangeField(models.Field):
 
     def formfield(self, **kwargs):
         defaults = {
-            'form_class': RangeFormField,
+            'form_class': self.formfield_class,
             'range_type': self.range_type
         }
         defaults.update(kwargs)
@@ -33,12 +33,25 @@ class RangeField(models.Field):
 
 class Int4RangeField(RangeField):
     range_type = NumericRange
+    formfield_class = range_fields.NumericRangeField
+
     def db_type(self, connection):
         return 'int4range'
 
     def get_internal_type(self):
         return 'Int4RangeField'
 
+
+
+class DateRangeField(RangeField):
+    range_type = DateRange
+    formfield_class = range_fields.DateRangeField
+
+    def db_type(self, connection):
+        return 'daterange'
+
+    def get_internal_type(self):
+        return 'DateRangeField'
 
 
 class RangeOverlapsLookup(models.Lookup):
