@@ -1,7 +1,7 @@
 
 from django import forms
 
-from psycopg2.extras import Range, NumericRange, DateRange
+from psycopg2.extras import Range, NumericRange, DateRange, DateTimeRange
 
 LOWER = [('(', '('), ('[', '[')]
 UPPER = [(')', ')'), (']', ']')]
@@ -74,6 +74,11 @@ class DateRangeField(RangeField):
     widget = DateRangeWidget
     base_field = forms.DateField
     range_type = DateRange
+
+
+class DateTimeRangeField(DateRangeField):
+    range_type = DateTimeRange
+
 
 class NumericRangeField(RangeField):
     widget = NumericRangeWidget

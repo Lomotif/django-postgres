@@ -16,3 +16,5 @@ class IntervalField(models.Field):
         if value == '' and self.null:
             return None
         return value
+
+
