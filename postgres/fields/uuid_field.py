@@ -5,10 +5,12 @@ import uuid
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import six
+from django.utils.translation import ugettext_lazy as _
 
 from psycopg2.extras import register_uuid
 
 register_uuid()
+
 
 class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
     """
@@ -19,20 +21,9 @@ class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
     will automatically be cast to UUID.
     """
     description = "UUID"
-
-    def __init__(self, *args, **kwargs):
-        self.auto = kwargs.pop('auto', False)
-        # Using this column as a primary_key implies auto.
-        # Because we are a uuidfield, we can set ourself, and
-        # not rely on the server.
-        if kwargs.get('primary_key', False):
-            self.auto = True
-        super(UUIDField, self).__init__(*args, **kwargs)
-
-
-    def get_default(self):
-        if self.auto:
-            return uuid.uuid4()
+    default_error_messages = {
+        'invalid': _("'%(value)s' is not a valid UUID."),
+    }
 
     def get_internal_type(self):
         return 'UUIDField'
@@ -42,18 +33,13 @@ class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
 
     def to_python(self, value):
         if isinstance(value, six.string_types):
-            if not value:
-                if self.null:
-                    return None
-                if self.blank:
-                    return ''
-        if isinstance(value, uuid.UUID):
-            return value
-        try:
-            return uuid.UUID(value)
-        except ValueError as exc:
-            raise ValidationError(*exc.args)
+            try:
+                return uuid.UUID(value)
+            except ValueError:
+                raise ValidationError(
+                    self.error_messages['invalid'],
+                    code='invalid',
+                    params={'value': value}
+                )
 
-
-# Lookups for UUIDField.
-# Which ones acutally make sense? Any that we need to handle custom?
+        return value

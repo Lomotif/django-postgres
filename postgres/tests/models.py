@@ -19,14 +19,16 @@ class JSONFieldNullModel(models.Model):
     def __unicode__(self):
         return json.dumps(self.json)
 
+import uuid
+
 class UUIDFieldModel(models.Model):
-    uuid = uuid_field.UUIDField(auto=True)
+    uuid = uuid_field.UUIDField(default=uuid.uuid4)
 
     def __unicode__(self):
         return unicode(self.uuid)
 
 class UUIDFieldPKModel(models.Model):
-    uuid = uuid_field.UUIDField(primary_key=True)
+    uuid = uuid_field.UUIDField(primary_key=True, default=uuid.uuid4)
 
     def __unicode__(self):
         return unicode(self.uuid)
