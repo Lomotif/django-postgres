@@ -2,6 +2,8 @@ from django.db.migrations.operations.base import Operation
 from django.db import connection
 
 from psycopg2.extras import register_composite
+from .fields.composite import composite_type_created
+
 
 class LoadSQLFromScript(Operation):
     def __init__(self, filename):
@@ -34,6 +36,7 @@ class CreateCompositeType(Operation):
         schema_editor.execute('CREATE TYPE %s AS (%s)' % (
             self.name, ", ".join(["%s %s" % field for field in self.fields])
         ))
+        composite_type_created.send(sender=self.__class__, db_type=self.name)
 
     def state_backwards(self, app_label, state):
         pass
