@@ -1,8 +1,5 @@
 from __future__ import unicode_literals
 
-from datetime import timedelta
-
-from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from psycopg2.extras import DateRange, DateTimeRange, NumericRange

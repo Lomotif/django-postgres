@@ -19,7 +19,7 @@ def range_to_string(value):
         )
     return value
 
-Range.__unicode__ = range_to_string
+# Range.__unicode__ = range_to_string
 
 RANGE_RE = re.compile(
     r'^\W*(?P<lower_bound>[\[\(])'
