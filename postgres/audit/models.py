@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models, connection
 from django.utils.functional import cached_property
+from django.utils.timezone import now
 
 import postgres.fields.json_field
 import postgres.fields.internal_types
@@ -79,11 +80,7 @@ class AuditLog(models.Model):
         model = get_model_from_table(self.table_name)
         # Need to get primary key field name from model class.
         pk = model._meta.pk
-        query = 'SELECT * FROM "%s"."%s" WHERE "%s"=%s' % (
-            self.schema_name, self.table_name,
-            pk.name, self.row_data[pk.name]
-        )
-        return model._default_manager.raw(query)[0]
+        return model._default_manager.get(**{pk.name: self.row_data[pk.name]})
 
     @cached_property
     def model_class(self):
@@ -179,3 +176,7 @@ class AuditLog(models.Model):
             data.update(**self.changed_fields)
         return self._build_model(data)
 
+
+# class ProcessedAuditLog(models.Model):
+#     audit_log = models.OneToOneField(AuditLog, primary_key=True, related_name='processed')
+#     timestamp = models.DateTimeField(default=now)
