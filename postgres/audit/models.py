@@ -1,13 +1,13 @@
 from django.conf import settings
-from django.db import models, connection
+from django.db import models
 from django.utils.functional import cached_property
-from django.utils.timezone import now
 
 import postgres.fields.json_field
 import postgres.fields.internal_types
 import postgres.fields.bigint_field
 
 known_models = {}
+
 
 def get_model_from_table(table):
     if not known_models:
@@ -49,6 +49,11 @@ class AuditLogQuerySet(models.QuerySet):
         return self.filter(app_user=user.pk)
 
 
+class AuditManager(models.Manager):
+    def get_queryset(self):
+        return super(AuditManager, self).get_queryset().select_related('app_user')
+
+
 class AuditLog(models.Model):
     """
     This is really only for being able to access the data,
@@ -73,7 +78,7 @@ class AuditLog(models.Model):
     app_user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
     app_ip_address = models.IPAddressField(null=True)
 
-    objects = AuditLogQuerySet.as_manager()
+    objects = AuditManager.from_queryset(AuditLogQuerySet)()
 
     @property
     def current_instance(self):
@@ -110,7 +115,7 @@ class AuditLog(models.Model):
             elif field.db_column:
                 data[field.name] = data.pop(field.db_column)
 
-        data = dict((key,value) for (key,value) in data.items() if key in fields)
+        data = dict((key, value) for (key, value) in data.items() if key in fields)
 
         return model(**data)
 

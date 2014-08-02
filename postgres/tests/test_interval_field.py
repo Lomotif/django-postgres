@@ -21,3 +21,4 @@ class TestIntervalField(TestCase):
             timedelta(hours=1, minutes=10, seconds=30),
             build_interval('1:10:30')
         )
+
