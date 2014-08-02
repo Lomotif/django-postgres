@@ -40,18 +40,18 @@ BEGIN
 
     IF (TG_OP = 'UPDATE' AND TG_LEVEL = 'ROW') THEN
         -- Convert our table to a json structure.
-        row_data = to_json(OLD.*);
+        row_data = to_json(OLD.*)::jsonb;
         -- Remove any columns we want to exclude, and then any
         -- columns that still have the same value as before the update.
-        changed_fields =  to_json(NEW.*) - excluded_cols - row_data;
+        changed_fields =  to_json(NEW.*)::jsonb - excluded_cols - row_data;
         IF changed_fields = '{}'::jsonb THEN
             -- All changed fields are ignored. Skip this update.
             RETURN NULL;
         END IF;
     ELSIF (TG_OP = 'DELETE' AND TG_LEVEL = 'ROW') THEN
-        row_data = to_json(OLD.*) - excluded_cols;
+        row_data = to_json(OLD.*)::jsonb - excluded_cols;
     ELSIF (TG_OP = 'INSERT' AND TG_LEVEL = 'ROW') THEN
-        row_data = to_json(NEW.*) - excluded_cols;
+        row_data = to_json(NEW.*)::jsonb - excluded_cols;
     ELSIF (TG_LEVEL = 'STATEMENT' AND TG_OP IN ('INSERT','UPDATE','DELETE','TRUNCATE')) THEN
         statement_only = 't';
     ELSE
