@@ -21,10 +21,8 @@ BEGIN
 
     -- Inject the data from the _app_user table if it exists.
     BEGIN
-      FOR r IN SELECT * FROM _app_user LIMIT 1 LOOP
-          app_user_id = r.user_id;
-          app_ip_address = r.ip_address;
-      END LOOP;
+      SELECT INTO app_user_id CURRENT_SETTING('app.user');
+      SELECT INTO app_ip_address CURRENT_SETTING('app.ip_address');
     EXCEPTION WHEN OTHERS THEN
     END;
 
