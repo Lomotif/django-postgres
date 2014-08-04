@@ -17,4 +17,4 @@ class AuditQueryForm(forms.Form):
             bounds='[)'
         )
 
-        return AuditLog.objects.filter(timestamp__in=date_range)
+        return AuditLog.objects.filter(timestamp__in=date_range).order_by('-timestamp')
