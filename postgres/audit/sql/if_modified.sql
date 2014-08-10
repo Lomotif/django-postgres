@@ -19,7 +19,9 @@ BEGIN
         RAISE EXCEPTION '__audit.if_modified_func() may only run as an AFTER trigger';
     END IF;
 
-    -- Inject the data from the _app_user table if it exists.
+    -- Inject the data from the app settings if they exist.
+    -- We need to do this in a transaction, as there doesn't
+    -- seem to be any way to test existence.
     BEGIN
       SELECT INTO app_user_id CURRENT_SETTING('app.user');
       SELECT INTO app_ip_address CURRENT_SETTING('app.ip_address');
