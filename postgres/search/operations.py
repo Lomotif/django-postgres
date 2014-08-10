@@ -3,9 +3,7 @@ import re
 from django.db import connection
 from django.db.migrations.operations.base import Operation
 
-CREATE_VIEW = """CREATE OR REPLACE VIEW search_search AS
-%s
-"""
+CREATE_VIEW = "CREATE OR REPLACE VIEW search_search AS\n%s"
 
 QUERY = """SELECT
     %(table)s.id AS id,
@@ -20,6 +18,7 @@ FROM
 
 QUERY_RE = re.compile(r'^\W+SELECT (?P<columns>.*) FROM (?P<table>[^\n\t ]*)', re.DOTALL)
 
+
 def inspect_query(query):
     return QUERY_RE.match(query).groupdict()
 
@@ -33,10 +32,11 @@ def get_current_view_definition():
         return view[1].replace('FROM %s.' % view[0], 'FROM ').rstrip(';').split('UNION ALL')
     return []
 
+
 def updated_view_definition(data):
     queries = get_current_view_definition()
     found = False
-    for i,query in enumerate(queries):
+    for i, query in enumerate(queries):
         if inspect_query(query)['table'] == data['table']:
             queries[i] = QUERY % data
             found = True
@@ -56,7 +56,17 @@ def removed_view_definition(data):
     if not queries:
         return 'DROP VIEW IF EXISTS search_search'
 
-    return CREATE_VIEW %  '\nUNION ALL\n'.join(queries)
+    return CREATE_VIEW % '\nUNION ALL\n'.join(queries)
+
+
+def quote_text(value, table):
+    if isinstance(value, (list, tuple)):
+        return " || ' ' || ".join([quote_text(_value, table) for _value in value])
+
+    if value[0] == "'":
+        return "%s::text" % value
+
+    return "%s.%s::text" % (table, value)
 
 
 class SearchModel(Operation):
@@ -75,12 +85,12 @@ class SearchModel(Operation):
                 'to_tsvector(%s.%s::text)' % (table, column)
                 for column in search_columns
             ]),
-            'title': "%s::text" % title if "'" in title else "%s.%s" % (table, title),
-            'detail': "%s::text" % detail if "'" in detail else "%s.%s" % (table, detail),
-            'url_name': "'%s'::text" % url_name, # Always a quoted string?
-            'url_kwargs':', '.join([
+            'title': quote_text(title, table),
+            'detail': quote_text(detail, table),
+            'url_name': "'%s'::text" % url_name,    # Always a quoted string?
+            'url_kwargs': ', '.join([
                 "'%s', %s.%s" % (name, table, field)
-                for name,field in url_kwargs.items()
+                for name, field in url_kwargs.items()
             ])
         }
 

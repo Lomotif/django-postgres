@@ -1,7 +1,6 @@
 import json
 
 from django.http import HttpResponse
-from django.core.urlresolvers import reverse
 from django.utils.html import conditional_escape as escape
 
 from ..views import FormListView, AjaxTemplateMixin
@@ -9,13 +8,13 @@ from .models import Search
 from .forms import SearchForm
 
 def uikit(request):
-    searches = Search.objects.matches(request.GET['search'])
+    searches = Search.objects.matching(request.GET['search'], ranked=True)[:15]
 
     return HttpResponse(json.dumps({
         'results': [
             {
                 'title': escape(search.title),
-                'url': reverse(search.url_name, kwargs=search.url_kwargs),
+                'url': search.url,
                 'text': escape(search.detail),
             } for search in searches
         ]
