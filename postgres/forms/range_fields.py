@@ -6,6 +6,7 @@ from psycopg2.extras import Range, NumericRange, DateRange, DateTimeRange
 LOWER = [('(', '('), ('[', '[')]
 UPPER = [(')', ')'), (']', ']')]
 
+
 class RangeWidget(forms.MultiWidget):
     base_widget = None
 
@@ -19,7 +20,7 @@ class RangeWidget(forms.MultiWidget):
 
     def decompress(self, value):
         if not value:
-            return None
+            return [None, None, None, None]
         return [
             value._bounds[0],
             value.lower,
@@ -30,6 +31,7 @@ class RangeWidget(forms.MultiWidget):
 
 class DateRangeWidget(RangeWidget):
     base_widget = forms.DateInput
+
 
 class NumericRangeWidget(RangeWidget):
     base_widget = forms.TextInput
@@ -56,9 +58,9 @@ class RangeField(forms.MultiValueField):
             fields=fields, *args, **kwargs
         )
 
-    def clean(self,value):
+    def clean(self, value):
         return self.compress([
-            self.fields[i].clean(v) for i,v in enumerate(value)
+            self.fields[i].clean(v) for i, v in enumerate(value)
         ])
 
     def compress(self, data_list):
@@ -67,7 +69,6 @@ class RangeField(forms.MultiValueField):
             upper=data_list[2],
             bounds='%s%s' % (data_list[0], data_list[3])
         )
-
 
 
 class DateRangeField(RangeField):

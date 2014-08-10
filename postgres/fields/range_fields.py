@@ -1,25 +1,15 @@
 import re
 from decimal import Decimal
+import datetime
 
 from django.db import models
 from django.utils import six
+from django import forms
+from django.utils.translation import ugettext_lazy as _
 
 from psycopg2._range import Range, DateRange, DateTimeRange, NumericRange
 
 from ..forms import range_fields
-
-# Monkey patch Range so that we get a a string that can
-# be used to save. This may go away when we have proper
-# fields.
-def range_to_string(value):
-    if value and not isinstance(value, six.string_types):
-        lower, upper = value._bounds
-        return '%s%s,%s%s' % (
-            lower, value.lower or '', value.upper or '', upper
-        )
-    return value
-
-# Range.__unicode__ = range_to_string
 
 RANGE_RE = re.compile(
     r'^\W*(?P<lower_bound>[\[\(])'
@@ -36,6 +26,7 @@ DATE_RE = re.compile(
     r'^(?P<year>\d\d\d\d)-(?P<month>(0\d)|(1[012]))-(?P<day>([012]\d)|(3[01]))$'
 )
 
+
 def cast(value):
     if not value:
         return None
@@ -47,10 +38,11 @@ def cast(value):
 
     if DATE_RE.match(value):
         return datetime.date(**dict(
-            (key,int(value)) for key,value in DATE_RE.match(value).groupdict()
+            (key, int(value)) for key, value in DATE_RE.match(value).groupdict()
         ))
 
     return None
+
 
 def range_from_string(cls, value):
     match = RANGE_RE.match(value)
@@ -80,7 +72,11 @@ def is_range(value):
 
 
 class RangeField(models.Field):
-    range_type= Range
+    range_type = Range
+
+    def __init__(self, *args, **kwargs):
+        self.empty = kwargs.pop('empty', True)
+        super(RangeField, self).__init__(*args, **kwargs)
 
     def formfield(self, **kwargs):
         defaults = {
@@ -89,8 +85,6 @@ class RangeField(models.Field):
         }
         defaults.update(kwargs)
         return super(RangeField, self).formfield(**defaults)
-
-
 
 
 class NumericRangeField(RangeField):
@@ -114,7 +108,6 @@ class Int8RangeField(NumericRangeField):
         return 'Int8RangeField'
 
 
-
 class DateRangeField(RangeField):
     range_type = DateRange
     formfield_class = range_fields.DateRangeField
@@ -129,7 +122,6 @@ class DateRangeField(RangeField):
 class DateTimeRangeField(RangeField):
     range_type = DateTimeRange
     formfield_class = range_fields.DateTimeRangeField
-
 
 
 class RangeLookup(models.Lookup):
@@ -213,9 +205,7 @@ def InRangeFactory(RangeType, range_cast=None, column_cast=None):
         def as_sql(self, qn, connection):
             if is_range(self.rhs):
                 return self.in_range_sql(qn, connection)
-
             return super(InRange, self).as_sql(qn, connection)
-
 
         def in_range_sql(self, qn, connection):
             lhs, lhs_params = self.process_lhs(qn, connection)
