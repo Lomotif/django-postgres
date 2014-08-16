@@ -17,6 +17,16 @@ def get_model_from_table(table):
     return known_models[table]
 
 
+def get_field_display(instance, field):
+    # If we were just usable in a template, we could get rid
+    # of the lambda and the call.
+    return getattr(
+        instance,
+        'get_%s_display' % field,
+        lambda: getattr(instance, field)
+    )()
+
+
 class AuditLogQuerySet(models.QuerySet):
     def for_instance(self, instance):
         pk = {
@@ -147,17 +157,16 @@ class AuditLog(models.Model):
             # New object! all fields are new.
             return [{
                 'field': field_titles[key],
-                'new': getattr(new_instance, field_names[key])
-            } for key in self.row_data if key in field_titles
-            ]
+                'new': get_field_display(new_instance, field_names[key]),
+            } for key in self.row_data if key in field_titles]
 
         old_instance = self.old_instance
 
         return [
             {
                 'field': field_titles[key],
-                'old': getattr(old_instance, field_names[key], ''),
-                'new': getattr(new_instance, field_names[key], ''),
+                'old': get_field_display(old_instance, field_names[key]),
+                'new': get_field_display(new_instance, field_names[key]),
             } for key in self.changed_fields
             if key in field_titles
         ]

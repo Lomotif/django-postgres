@@ -1,3 +1,5 @@
+import datetime
+
 from django import forms
 from django.core.paginator import Paginator, InvalidPage, EmptyPage
 
@@ -13,7 +15,7 @@ class AuditQueryForm(forms.Form):
     def get_queryset(self):
         date_range = DateRange(
             lower=self.cleaned_data['start'],
-            upper=self.cleaned_data['finish'],
+            upper=self.cleaned_data['finish'] + datetime.timedelta(1),
             bounds='[)'
         )
 
