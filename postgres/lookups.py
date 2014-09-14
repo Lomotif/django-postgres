@@ -1,5 +1,4 @@
 from django.db.models.lookups import BuiltinLookup
-from django.db import models
 
 
 class PostgresLookup(BuiltinLookup):
@@ -9,6 +8,3 @@ class PostgresLookup(BuiltinLookup):
 
     def get_rhs_op(self, connection, rhs):
         return '%s %s' % (self.operator, rhs)
-
-
-

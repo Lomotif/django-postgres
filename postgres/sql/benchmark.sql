@@ -10,7 +10,7 @@
 --
 -- Example output:
 --
---          code         |  runtime   | corrected  
+--          code         |  runtime   | corrected
 -- ----------------------+------------+------------
 --  [Control]            | 0.00612307 |          0
 --  to_json('{}'::json)  |   0.012506 | 0.00638294
@@ -53,7 +53,7 @@ BEGIN
             d := extract(epoch from e) - extract(epoch from s);
             ret := ROW( '[Control]', d, 0 );
             RETURN NEXT ret;
- 
+
 $_$;
     -- Append the code to bench each function call.
     FOR i IN array_lower(funcs,1) .. array_upper(funcs, 1) LOOP
@@ -66,7 +66,7 @@ $_$;
             res := extract(epoch from e) - extract(epoch from s);
             ret := ROW(
                 $__$ || quote_literal(funcs[i]) || $__$,
-                res, 
+                res,
                 res - d
             );
             RETURN NEXT ret;
@@ -77,7 +77,7 @@ $__$;
     execute code || $_$
         END;
         $__$ language plpgsql;
-$_$; 
+$_$;
 
     -- Now execute the function.
     FOR a IN EXECUTE 'SELECT * FROM _bench(' || n || ')' LOOP
