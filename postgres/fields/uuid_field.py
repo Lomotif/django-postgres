@@ -25,6 +25,10 @@ class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
         'invalid': _("'%(value)s' is not a valid UUID."),
     }
 
+    def __init__(self, **kwargs):
+        kwargs['max_length'] = 36
+        super(UUIDField, self).__init__(**kwargs)
+
     def get_internal_type(self):
         return 'UUIDField'
 
@@ -32,6 +36,9 @@ class UUIDField(six.with_metaclass(models.SubfieldBase, models.Field)):
         return 'uuid'
 
     def to_python(self, value):
+        if not value:
+            return None
+
         if isinstance(value, six.string_types):
             try:
                 return uuid.UUID(value)
