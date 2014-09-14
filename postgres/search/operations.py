@@ -6,7 +6,7 @@ from django.db.migrations.operations.base import Operation
 CREATE_VIEW = "CREATE OR REPLACE VIEW search_search AS\n%s"
 
 QUERY = """SELECT
-    %(table)s.id AS id,
+    ''::text AS id,
     %(search_columns)s AS term,
     %(title)s::text AS title,
     %(detail)s AS detail,
