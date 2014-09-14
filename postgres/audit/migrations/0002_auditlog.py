@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                 ('row_data', postgres.fields.json_field.JSONField(null=True)),
                 ('changed_fields', postgres.fields.json_field.JSONField(null=True)),
                 ('app_ip_address', models.IPAddressField(null=True)),
-                ('app_user', models.ForeignKey(to=settings.AUTH_USER_MODEL, to_field='id', null=True)),
+                ('app_user', models.ForeignKey(to=settings.AUTH_USER_MODEL, null=True)),
             ],
             options={
             },
