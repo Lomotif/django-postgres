@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 import json
 import decimal
 
-from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models.lookups import BuiltinLookup, Transform
@@ -17,6 +16,7 @@ register_json(oid=3802, array_oid=3807)
 # However, it may be that we want to use specific decoding on
 # the json object... which if we wanted to do it on a per-field
 # basis, we'd need to not have run that line.
+
 
 class JSONField(models.Field):
     description = 'JSON Field'
@@ -167,6 +167,7 @@ class Get(Transform):
             filter_to = "%s @> '[]' AND" % lhs
 
         return '%s %s -> %s' % (filter_to, lhs, self.name), params
+
 
 class GetTransform(object):
     def __init__(self, name):

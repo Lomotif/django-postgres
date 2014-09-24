@@ -9,6 +9,7 @@ from psycopg2 import ProgrammingError
 
 _missing_types = {}
 
+
 class CompositeMeta(type):
     def __init__(cls, name, bases, clsdict):
         super(CompositeMeta, cls).__init__(name, bases, clsdict)
@@ -37,6 +38,9 @@ class CompositeMeta(type):
 
 
 class CompositeField(fields.Field):
+    # We should also incorporate the stuff from SubFieldBase, so
+    # we convert any iterable of the correct arity, and coercable types
+    # into the python_type.
     __metaclass__ = CompositeMeta
     """
     A handy base class for defining your own composite fields.

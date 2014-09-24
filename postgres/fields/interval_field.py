@@ -1,6 +1,4 @@
-
 from django.db import models
-from django.utils import six
 
 
 class IntervalField(models.Field):
@@ -16,5 +14,3 @@ class IntervalField(models.Field):
         if value == '' and self.null:
             return None
         return value
-
-

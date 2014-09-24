@@ -2,6 +2,7 @@ from django.db import models
 
 from ..lookups import PostgresLookup
 
+
 class TSVectorField(models.Field):
 
     def db_type(self, connection):
@@ -18,5 +19,3 @@ class TSVectorMatches(PostgresLookup):
     operator = '@@'
 
 TSVectorField.register_lookup(TSVectorMatches)
-
-
