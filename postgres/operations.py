@@ -1,7 +1,5 @@
 from django.db.migrations.operations.base import Operation
-from django.db import connection
 
-from psycopg2.extras import register_composite
 from .fields.composite import composite_type_created
 
 
