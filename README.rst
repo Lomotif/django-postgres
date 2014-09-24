@@ -13,9 +13,28 @@ Fields (stable-ish)
 
 There are already some fields that are mostly ready to use.
 
+ArrayField
+----------
+A backport of `django.contrib.postgres`' `ArrayField`.
+
 BigIntField
 -----------
 A wrapper on `IntegerField` that uses the postgres `bigint` column type. Does nothing else.
+
+CompositeField
+--------------
+A parent class for creating your own Composite Types.
+
+http://schinckel.net/2014/09/24/using-postgres-composite-types-in-django/
+
+This generally requires that either the composite type already exists in your database, or you write a migration (using the supplied migration Operation, as then it will handle late registration).
+
+Documentation for this is probably poorer than it needs to be to be usable.
+
+IntervalField
+-------------
+Super-simple interval field that maps to a python timedelta.
+
 
 JSONField
 ---------
@@ -28,24 +47,28 @@ This allows for lookups using the new django 1.7 lookup API:
 
 It supports all of the json operators: containment, contains, equality, has all, has any. It also supports the path lookup operators, although will not work with keys with characters that are not part of the character set that makes up python identifiers, or contain a double underscore.
 
+The bottom of http://schinckel.net/2014/05/25/querying-json-in-postgres/ contains more information about how it may eventually work. The lookups work, but the names of them may change.
+
+RangeField(s)
+-------------
+Seamless handling (including form fields, and widgets) of the default Range types supplied by Postgres.
+
+A range field contains a start and a finish, and flags if the upper and lower bounds are inclusive or not. These bounds are rendered as the mathematical notation for bounds inclsivity: `[`, `(` for the lower bound, and `]`, `)` for the upper bound. You probably don't want to be showing this to non-mathematically literate users.
+
 UUIDField
 ---------
 Simple UUIDField that takes advantage of psycopg2's uuid handling facilities.
+
+Fields you probably don't need to use
+=====================================
 
 OIDField
 --------
 A subclass of `IntegerField` that writes the column type as `oid`. This is an internal postgres column type: you probably don't want to use this.
 
+
 Fields (development)
 ====================
-
-IntervalField
--------------
-Should be easy to develop, based on my django-timedeltafield.
-
-RangeField(s)
--------------
-This may be tricky.
 
 RruleField
 ----------
@@ -57,9 +80,16 @@ Extras
 postgres.audit
 --------------
 
-What should be a useful auditing system. Uses postgres AFTER UPDATE triggers to log changes to a table. Working relatively well, so far.
+What should be a useful auditing system. Uses postgres `AFTER UPDATE` triggers to log changes to a table. Working relatively well, so far.
 
-Uses a middleware to set the django user id (and external ip address), which could be the weak link, as these are put into a temporary table, that should only last as long as the current transaction. Since this happens in middleware, we may lose it if the request contains multiple transactions.
+Uses a middleware to set the django user id (and external ip address), which are stored in session variables.
+
+postgres.search
+---------------
+
+A search feature, built using postgres `VIEW`s, that allow selecting data from disparate tables (using `UNION ALL`). I really need to finish the blog post about this.
+
+I've currently got this working using the really neat search widget from `UIKit`.
 
 sql.json_ops
 ------------
@@ -68,7 +98,7 @@ A couple of extra functions/operators for PG9.4's json/jsonb datatypes. These br
 
 Notably, it allows for `subtraction` of json objects, or subtraction from a json object of an array of strings. This operation is used in the `postgres.audit` trigger function to remove unwanted/unchanged column values.
 
-sqs.benchmark
+sql.benchmark
 -------------
 
 A neat function for benchmarking postgres function execution time. Probably not useful to you, but might be.
