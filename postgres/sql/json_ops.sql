@@ -218,12 +218,14 @@ CREATE OR REPLACE FUNCTION "json_subtract"(
   IMMUTABLE
   STRICT
 AS $function$
-SELECT COALESCE(
+SELECT CASE WHEN "json"::jsonb ? "remove" THEN COALESCE(
   (SELECT ('{' || string_agg(to_json("key")::text || ':' || "value", ',') || '}')
      FROM json_each("json")
     WHERE "key" <> "remove"),
   '{}'
 )::json
+ELSE "json"
+END;
 $function$;
 
 
