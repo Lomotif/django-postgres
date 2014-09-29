@@ -30,14 +30,18 @@ def runtests():
     if not settings.configured:
         settings.configure(**DEFAULT_SETTINGS)
 
-    django.setup()
+    if hasattr(django, 'setup'):
+        django.setup()
+        from django.test.runner import DiscoverRunner
+        runner_class = DiscoverRunner
+    else:
+        from django.test.utils import get_runner
+        runner_class = get_runner(settings)
 
     parent = os.path.dirname(os.path.abspath(__file__))
     sys.path.insert(0, parent)
 
-    from django.test.runner import DiscoverRunner
-    runner_class = DiscoverRunner
-    test_args = ['postgres.tests']
+    test_args = ['postgres']
 
     failures = runner_class(
         verbosity=1, interactive=True, failfast=False).run_tests(test_args)

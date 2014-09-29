@@ -2,8 +2,13 @@ import json
 
 from ..forms import SimpleArrayField
 from ..validators import ArrayMaxLengthValidator
-from django.core import checks, exceptions
-from django.db.models import Field, Lookup, Transform, IntegerField
+import django
+try:
+    from django.core import checks, exceptions
+    from django.db.models import Field, Lookup, Transform, IntegerField
+except ImportError:
+    from django.core import exceptions
+    from django.db.models import Field, IntegerField
 from django.utils import six
 from django.utils.translation import string_concat, ugettext_lazy as _
 
@@ -160,104 +165,105 @@ class ArrayField(Field):
         return super(ArrayField, self).formfield(**defaults)
 
 
-class ArrayContainsLookup(Lookup):
-    lookup_name = 'contains'
+if django.VERSION > (1, 7):
+    class ArrayContainsLookup(Lookup):
+        lookup_name = 'contains'
 
-    def as_sql(self, qn, connection):
-        lhs, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
-        params = lhs_params + rhs_params
-        type_cast = self.lhs.source.db_type(connection)
-        return '%s @> %s::%s' % (lhs, rhs, type_cast), params
-
-
-ArrayField.register_lookup(ArrayContainsLookup)
+        def as_sql(self, qn, connection):
+            lhs, lhs_params = self.process_lhs(qn, connection)
+            rhs, rhs_params = self.process_rhs(qn, connection)
+            params = lhs_params + rhs_params
+            type_cast = self.lhs.source.db_type(connection)
+            return '%s @> %s::%s' % (lhs, rhs, type_cast), params
 
 
-class ArrayContainedByLookup(Lookup):
-    lookup_name = 'contained_by'
-
-    def as_sql(self, qn, connection):
-        lhs, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
-        params = lhs_params + rhs_params
-        return '%s <@ %s' % (lhs, rhs), params
+    ArrayField.register_lookup(ArrayContainsLookup)
 
 
-ArrayField.register_lookup(ArrayContainedByLookup)
+    class ArrayContainedByLookup(Lookup):
+        lookup_name = 'contained_by'
+
+        def as_sql(self, qn, connection):
+            lhs, lhs_params = self.process_lhs(qn, connection)
+            rhs, rhs_params = self.process_rhs(qn, connection)
+            params = lhs_params + rhs_params
+            return '%s <@ %s' % (lhs, rhs), params
 
 
-class ArrayOverlapLookup(Lookup):
-    lookup_name = 'overlap'
-
-    def as_sql(self, qn, connection):
-        lhs, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = self.process_rhs(qn, connection)
-        params = lhs_params + rhs_params
-        return '%s && %s' % (lhs, rhs), params
+    ArrayField.register_lookup(ArrayContainedByLookup)
 
 
-ArrayField.register_lookup(ArrayOverlapLookup)
+    class ArrayOverlapLookup(Lookup):
+        lookup_name = 'overlap'
+
+        def as_sql(self, qn, connection):
+            lhs, lhs_params = self.process_lhs(qn, connection)
+            rhs, rhs_params = self.process_rhs(qn, connection)
+            params = lhs_params + rhs_params
+            return '%s && %s' % (lhs, rhs), params
 
 
-class ArrayLenTransform(Transform):
-    lookup_name = 'len'
-
-    @property
-    def output_field(self):
-        return IntegerField()
-
-    def as_sql(self, qn, connection):
-        lhs, params = qn.compile(self.lhs)
-        return 'array_length(%s, 1)' % lhs, params
+    ArrayField.register_lookup(ArrayOverlapLookup)
 
 
-ArrayField.register_lookup(ArrayLenTransform)
+    class ArrayLenTransform(Transform):
+        lookup_name = 'len'
+
+        @property
+        def output_field(self):
+            return IntegerField()
+
+        def as_sql(self, qn, connection):
+            lhs, params = qn.compile(self.lhs)
+            return 'array_length(%s, 1)' % lhs, params
 
 
-class IndexTransform(Transform):
-
-    def __init__(self, index, base_field, *args, **kwargs):
-        super(IndexTransform, self).__init__(*args, **kwargs)
-        self.index = index
-        self.base_field = base_field
-
-    def as_sql(self, qn, connection):
-        lhs, params = qn.compile(self.lhs)
-        return '%s[%s]' % (lhs, self.index), params
-
-    @property
-    def output_field(self):
-        return self.base_field
+    ArrayField.register_lookup(ArrayLenTransform)
 
 
-class IndexTransformFactory(object):
+    class IndexTransform(Transform):
 
-    def __init__(self, index, base_field):
-        self.index = index
-        self.base_field = base_field
+        def __init__(self, index, base_field, *args, **kwargs):
+            super(IndexTransform, self).__init__(*args, **kwargs)
+            self.index = index
+            self.base_field = base_field
 
-    def __call__(self, *args, **kwargs):
-        return IndexTransform(self.index, self.base_field, *args, **kwargs)
+        def as_sql(self, qn, connection):
+            lhs, params = qn.compile(self.lhs)
+            return '%s[%s]' % (lhs, self.index), params
 
-
-class SliceTransform(Transform):
-
-    def __init__(self, start, end, *args, **kwargs):
-        super(SliceTransform, self).__init__(*args, **kwargs)
-        self.start = start
-        self.end = end
-
-    def as_sql(self, qn, connection):
-        lhs, params = qn.compile(self.lhs)
-        return '%s[%s:%s]' % (lhs, self.start, self.end), params
+        @property
+        def output_field(self):
+            return self.base_field
 
 
-class SliceTransformFactory(object):
+    class IndexTransformFactory(object):
 
-    def __init__(self, start, end):
-        self.start = start
-        self.end = end
+        def __init__(self, index, base_field):
+            self.index = index
+            self.base_field = base_field
 
-    def __call__(self, *args, **kwargs):
-        return SliceTransform(self.start, self.end, *args, **kwargs)
+        def __call__(self, *args, **kwargs):
+            return IndexTransform(self.index, self.base_field, *args, **kwargs)
+
+
+    class SliceTransform(Transform):
+
+        def __init__(self, start, end, *args, **kwargs):
+            super(SliceTransform, self).__init__(*args, **kwargs)
+            self.start = start
+            self.end = end
+
+        def as_sql(self, qn, connection):
+            lhs, params = qn.compile(self.lhs)
+            return '%s[%s:%s]' % (lhs, self.start, self.end), params
+
+
+    class SliceTransformFactory(object):
+
+        def __init__(self, start, end):
+            self.start = start
+            self.end = end
+
+        def __call__(self, *args, **kwargs):
+            return SliceTransform(self.start, self.end, *args, **kwargs)

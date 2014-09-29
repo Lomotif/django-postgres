@@ -3,9 +3,13 @@ from __future__ import unicode_literals
 import json
 import decimal
 
+import django
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
-from django.db.models.lookups import BuiltinLookup, Transform
+try:
+    from django.db.models.lookups import BuiltinLookup, Transform
+except ImportError:
+    pass
 from django.utils import six
 
 from psycopg2.extras import register_json
@@ -100,98 +104,98 @@ class JSONField(models.Field):
 
         return GetTransform(name)
 
+if django.VERSION > (1, 7):
+    class PostgresLookup(BuiltinLookup):
+        def process_lhs(self, qn, connection, lhs=None):
+            lhs = lhs or self.lhs
+            return qn.compile(lhs)
 
-class PostgresLookup(BuiltinLookup):
-    def process_lhs(self, qn, connection, lhs=None):
-        lhs = lhs or self.lhs
-        return qn.compile(lhs)
-
-    def get_rhs_op(self, connection, rhs):
-        return '%s %s' % (self.operator, rhs)
-
-
-class Has(PostgresLookup):
-    lookup_name = 'has'
-    operator = '?'
-
-JSONField.register_lookup(Has)
+        def get_rhs_op(self, connection, rhs):
+            return '%s %s' % (self.operator, rhs)
 
 
-class Contains(PostgresLookup):
-    lookup_name = 'contains'
-    operator = '@>'
+    class Has(PostgresLookup):
+        lookup_name = 'has'
+        operator = '?'
 
-JSONField.register_lookup(Contains)
-
-
-class In(PostgresLookup):
-    lookup_name = 'in'
-    operator = '<@'
-
-JSONField.register_lookup(In)
+    JSONField.register_lookup(Has)
 
 
-class HasAll(PostgresLookup):
-    lookup_name = 'has_all'
-    operator = '?&'
+    class Contains(PostgresLookup):
+        lookup_name = 'contains'
+        operator = '@>'
 
-JSONField.register_lookup(HasAll)
-
-
-class HasAny(PostgresLookup):
-    lookup_name = 'has_any'
-    operator = '?|'
-
-JSONField.register_lookup(HasAny)
+    JSONField.register_lookup(Contains)
 
 
-class Get(Transform):
-    def __init__(self, name, *args, **kwargs):
-        super(Get, self).__init__(*args, **kwargs)
-        self.name = name
+    class In(PostgresLookup):
+        lookup_name = 'in'
+        operator = '<@'
 
-    def as_sql(self, qn, connection):
-        lhs, params = qn.compile(self.lhs)
-        # So we can run a query of this type against a column that contains
-        # both array-based and object-based (and possibly scalar) values,
-        # we need to add an additional WHERE clause that ensures we only
-        # get json objects/arrays, as per the input type.
-        # It would be really nice to be able to see if these clauses
-        # have already been applied.
-        if isinstance(self.name, six.string_types):
-            # Also filter on objects.
-            filter_to = "%s @> '{}' AND" % lhs
-            self.name = "'%s'" % self.name
-        elif isinstance(self.name, int):
-            # Also filter on arrays.
-            filter_to = "%s @> '[]' AND" % lhs
-
-        return '%s %s -> %s' % (filter_to, lhs, self.name), params
+    JSONField.register_lookup(In)
 
 
-class GetTransform(object):
-    def __init__(self, name):
-        self.name = name
+    class HasAll(PostgresLookup):
+        lookup_name = 'has_all'
+        operator = '?&'
 
-    def __call__(self, *args, **kwargs):
-        return Get(self.name, *args, **kwargs)
-
-
-class Path(Transform):
-    def __init__(self, path, *args, **kwargs):
-        super(Path, self).__init__(*args, **kwargs)
-        self.path = path
-
-    def as_sql(self, qn, connection):
-        lhs, params = qn.compile(self.lhs)
-        # Because path operations only work on non-scalar types, we
-        # need to filter out scalar types as part of the query.
-        return "({0} @> '[]' OR {0} @> '{{}}') AND {0} #> '{1}'".format(lhs, self.path), params
+    JSONField.register_lookup(HasAll)
 
 
-class PathTransformFactory(object):
-    def __init__(self, path):
-        self.path = path
+    class HasAny(PostgresLookup):
+        lookup_name = 'has_any'
+        operator = '?|'
 
-    def __call__(self, *args, **kwargs):
-        return Path(self.path, *args, **kwargs)
+    JSONField.register_lookup(HasAny)
+
+
+    class Get(Transform):
+        def __init__(self, name, *args, **kwargs):
+            super(Get, self).__init__(*args, **kwargs)
+            self.name = name
+
+        def as_sql(self, qn, connection):
+            lhs, params = qn.compile(self.lhs)
+            # So we can run a query of this type against a column that contains
+            # both array-based and object-based (and possibly scalar) values,
+            # we need to add an additional WHERE clause that ensures we only
+            # get json objects/arrays, as per the input type.
+            # It would be really nice to be able to see if these clauses
+            # have already been applied.
+            if isinstance(self.name, six.string_types):
+                # Also filter on objects.
+                filter_to = "%s @> '{}' AND" % lhs
+                self.name = "'%s'" % self.name
+            elif isinstance(self.name, int):
+                # Also filter on arrays.
+                filter_to = "%s @> '[]' AND" % lhs
+
+            return '%s %s -> %s' % (filter_to, lhs, self.name), params
+
+
+    class GetTransform(object):
+        def __init__(self, name):
+            self.name = name
+
+        def __call__(self, *args, **kwargs):
+            return Get(self.name, *args, **kwargs)
+
+
+    class Path(Transform):
+        def __init__(self, path, *args, **kwargs):
+            super(Path, self).__init__(*args, **kwargs)
+            self.path = path
+
+        def as_sql(self, qn, connection):
+            lhs, params = qn.compile(self.lhs)
+            # Because path operations only work on non-scalar types, we
+            # need to filter out scalar types as part of the query.
+            return "({0} @> '[]' OR {0} @> '{{}}') AND {0} #> '{1}'".format(lhs, self.path), params
+
+
+    class PathTransformFactory(object):
+        def __init__(self, path):
+            self.path = path
+
+        def __call__(self, *args, **kwargs):
+            return Path(self.path, *args, **kwargs)

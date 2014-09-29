@@ -2,6 +2,7 @@ import re
 from decimal import Decimal
 import datetime
 
+import django
 from django.db import models
 from django.utils import six
 from django import forms
@@ -124,100 +125,101 @@ class DateTimeRangeField(RangeField):
     formfield_class = range_fields.DateTimeRangeField
 
 
-class RangeLookup(models.Lookup):
-    def __init__(self, lhs, rhs):
-        self.lhs, self.rhs = lhs, rhs
-        # We need to cast a string that looks like a range
-        # to a range of the correct type, so psycopg2 will
-        # adapt it correctly.
-        if isinstance(rhs, six.string_types) and RANGE_RE.match(rhs):
-            self.rhs = range_from_string(self.lhs.source.range_type, rhs)
-
-    def as_sql(self, qn, connection):
-        lhs, lhs_params = self.process_lhs(qn, connection)
-        rhs, rhs_params = '%s', [self.rhs]
-        params = lhs_params + rhs_params
-        return '%s %s %s' % (lhs, self.operator, rhs), params
-
-
-@RangeField.register_lookup
-class RangeOverlapsLookup(RangeLookup):
-    lookup_name = 'overlaps'
-    operator = '&&'
-
-
-@RangeField.register_lookup
-class RangeContainsLookup(RangeLookup):
-    lookup_name = 'contains'
-    operator = '@>'
-
-
-@RangeField.register_lookup
-class RangeInLookup(RangeLookup):
-    lookup_name = 'in'
-    operator = '<@'
-
-
-@RangeField.register_lookup
-class RangeLeftOfLookup(RangeLookup):
-    lookup_name = 'left_of'
-    operator = '<<'
-
-
-@RangeField.register_lookup
-class RangeRightOfLookup(RangeLookup):
-    lookup_name = 'right_of'
-    operator = '>>'
-
-
-@RangeField.register_lookup
-class RangeNotExtendsRightOfLookup(RangeLookup):
-    lookup_name = 'not_extends_right_of'
-    operator = '&<'
-
-
-@RangeField.register_lookup
-class RangeNotExtendsLeftOfLookup(RangeLookup):
-    lookup_name = 'not_extends_left_of'
-    operator = '&>'
-
-
-@RangeField.register_lookup
-class RangeAdjacentTo(RangeLookup):
-    lookup_name = 'adjacent_to'
-    operator = '-|-'
-
-
-def InRangeFactory(RangeType, range_cast=None, column_cast=None):
-    if not range_cast:
-        range_cast = RangeType.__name__.lower()
-    if not column_cast:
-        column_cast = RangeType.__name__.lower().replace('range', '')
-
-    class InRange(models.lookups.BuiltinLookup):
-        lookup_name = 'in'
-
+if django.VERSION > (1,7):
+    class RangeLookup(models.Lookup):
         def __init__(self, lhs, rhs):
             self.lhs, self.rhs = lhs, rhs
-            if not is_range(self.rhs):
-                self.rhs = self.get_prep_lookup()
+            # We need to cast a string that looks like a range
+            # to a range of the correct type, so psycopg2 will
+            # adapt it correctly.
+            if isinstance(rhs, six.string_types) and RANGE_RE.match(rhs):
+                self.rhs = range_from_string(self.lhs.source.range_type, rhs)
 
         def as_sql(self, qn, connection):
-            if is_range(self.rhs):
-                return self.in_range_sql(qn, connection)
-            return super(InRange, self).as_sql(qn, connection)
-
-        def in_range_sql(self, qn, connection):
             lhs, lhs_params = self.process_lhs(qn, connection)
             rhs, rhs_params = '%s', [self.rhs]
             params = lhs_params + rhs_params
+            return '%s %s %s' % (lhs, self.operator, rhs), params
 
-            return '%s::%s <@ %s::%s' % (
-                lhs, column_cast,
-                rhs, range_cast
-            ), params
 
-    return InRange
+    @RangeField.register_lookup
+    class RangeOverlapsLookup(RangeLookup):
+        lookup_name = 'overlaps'
+        operator = '&&'
 
-models.DateField.register_lookup(InRangeFactory(DateRange))
-models.IntegerField.register_lookup(InRangeFactory(NumericRange, range_cast='int4range', column_cast='integer'))
+
+    @RangeField.register_lookup
+    class RangeContainsLookup(RangeLookup):
+        lookup_name = 'contains'
+        operator = '@>'
+
+
+    @RangeField.register_lookup
+    class RangeInLookup(RangeLookup):
+        lookup_name = 'in'
+        operator = '<@'
+
+
+    @RangeField.register_lookup
+    class RangeLeftOfLookup(RangeLookup):
+        lookup_name = 'left_of'
+        operator = '<<'
+
+
+    @RangeField.register_lookup
+    class RangeRightOfLookup(RangeLookup):
+        lookup_name = 'right_of'
+        operator = '>>'
+
+
+    @RangeField.register_lookup
+    class RangeNotExtendsRightOfLookup(RangeLookup):
+        lookup_name = 'not_extends_right_of'
+        operator = '&<'
+
+
+    @RangeField.register_lookup
+    class RangeNotExtendsLeftOfLookup(RangeLookup):
+        lookup_name = 'not_extends_left_of'
+        operator = '&>'
+
+
+    @RangeField.register_lookup
+    class RangeAdjacentTo(RangeLookup):
+        lookup_name = 'adjacent_to'
+        operator = '-|-'
+
+
+    def InRangeFactory(RangeType, range_cast=None, column_cast=None):
+        if not range_cast:
+            range_cast = RangeType.__name__.lower()
+        if not column_cast:
+            column_cast = RangeType.__name__.lower().replace('range', '')
+
+        class InRange(models.lookups.BuiltinLookup):
+            lookup_name = 'in'
+
+            def __init__(self, lhs, rhs):
+                self.lhs, self.rhs = lhs, rhs
+                if not is_range(self.rhs):
+                    self.rhs = self.get_prep_lookup()
+
+            def as_sql(self, qn, connection):
+                if is_range(self.rhs):
+                    return self.in_range_sql(qn, connection)
+                return super(InRange, self).as_sql(qn, connection)
+
+            def in_range_sql(self, qn, connection):
+                lhs, lhs_params = self.process_lhs(qn, connection)
+                rhs, rhs_params = '%s', [self.rhs]
+                params = lhs_params + rhs_params
+
+                return '%s::%s <@ %s::%s' % (
+                    lhs, column_cast,
+                    rhs, range_cast
+                ), params
+
+        return InRange
+
+    models.DateField.register_lookup(InRangeFactory(DateRange))
+    models.IntegerField.register_lookup(InRangeFactory(NumericRange, range_cast='int4range', column_cast='integer'))

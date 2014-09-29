@@ -1,7 +1,10 @@
+import django
 from django.db import models
 
-from ..lookups import PostgresLookup
-
+try:
+    from ..lookups import PostgresLookup
+except ImportError:
+    pass
 
 class TSVectorField(models.Field):
 
@@ -14,8 +17,10 @@ class TSQueryField(models.Field):
         return 'tsquery'
 
 
-class TSVectorMatches(PostgresLookup):
-    lookup_name = 'matches'
-    operator = '@@'
+if django.VERSION > (1,7):
 
-TSVectorField.register_lookup(TSVectorMatches)
+    class TSVectorMatches(PostgresLookup):
+        lookup_name = 'matches'
+        operator = '@@'
+
+    TSVectorField.register_lookup(TSVectorMatches)
