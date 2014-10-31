@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from django.db import models
 
 SQL = """
@@ -17,6 +19,12 @@ class RecursiveRelation(models.ForeignKey):
         # Prevent cycles?
         # Allow literal self-relation?
         super(RecursiveRelation, self).__init__('self', *args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super(RecursiveRelation, self).deconstruct()
+        kwargs.pop('to')
+        kwargs.pop('to_field', None)
+        return name, path, args, kwargs
 
     def get_lookup_constraint(self, constraint_class, alias, targets, sources, lookups,
                               raw_value):
