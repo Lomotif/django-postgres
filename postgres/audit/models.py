@@ -80,7 +80,7 @@ class AuditLog(models.Model):
     table_name = models.TextField()
     relid = postgres.fields.internal_types.OIDField()
     timestamp = models.DateTimeField()
-    transaction_id = postgres.fields.bigint_field.BigIntField(null=True)
+    transaction_id = models.BigIntegerField(null=True)
     client_query = models.TextField()
     statement_only = models.BooleanField(default=False)
     row_data = postgres.fields.json_field.JSONField(null=True)
