@@ -15,7 +15,7 @@ AS $function$
 
 SELECT COALESCE(
   (SELECT ('{' || string_agg(to_json("key")::text || ':' || "value", ',') || '}')
-     FROM (SELECT * FROM json_each("json") UNION ALL SELECT * FROM json_each("other")) AS a
+     FROM (SELECT * FROM json_each("other") UNION ALL SELECT * FROM json_each("json")) AS a
   ),
   '{}'
 )::json
@@ -34,7 +34,7 @@ AS $function$
 
 SELECT COALESCE(
   (SELECT ('{' || string_agg(to_json("key")::text || ':' || "value", ',') || '}')
-     FROM (SELECT * FROM json_each("json") UNION ALL SELECT * FROM json_each("other"::json)) AS a
+     FROM (SELECT * FROM json_each("other"::json) UNION ALL SELECT * FROM json_each("json")) AS a
   ),
   '{}'
 )::json
@@ -58,17 +58,14 @@ AS $function$
 
 SELECT COALESCE(
   (SELECT ('{' || string_agg(to_json("key")::text || ':' || "value", ',') || '}')
-     FROM (SELECT * FROM jsonb_each("json") UNION ALL SELECT * FROM jsonb_each("other"::jsonb)) AS a
+     FROM (SELECT * FROM jsonb_each("other"::jsonb) UNION ALL SELECT * FROM jsonb_each("json")) AS a
   ),
   '{}'
 )::jsonb
 $function$;
 
 
-CREATE OR REPLACE FUNCTION "jsonb_concatenate"(
-  "json" jsonb,
-  "other" jsonb
-)
+CREATE OR REPLACE FUNCTION "jsonb_concatenate"(jsonb, jsonb)
   RETURNS jsonb
   LANGUAGE sql
   IMMUTABLE
@@ -77,11 +74,46 @@ AS $function$
 
 SELECT COALESCE(
   (SELECT ('{' || string_agg(to_json("key")::text || ':' || "value", ',') || '}')
-     FROM (SELECT * FROM jsonb_each("json") UNION ALL SELECT * FROM jsonb_each("other")) AS a
+     FROM (SELECT * FROM jsonb_each($1) UNION ALL SELECT * FROM jsonb_each($2)) AS a
   ),
   '{}'
 )::jsonb
 $function$;
+
+
+CREATE OR REPLACE FUNCTION "jsonb_concatenate_cte" (jsonb, jsonb) RETURNS jsonb AS $$
+WITH json_union AS
+(
+  SELECT * FROM jsonb_each($1) UNION ALL SELECT * FROM jsonb_each($2)
+)
+SELECT COALESCE(
+  (SELECT ('{' || string_agg(to_json("key")::text || ':' || "value", ',') || '}')
+    FROM json_union),
+  '{}'
+)::jsonb;
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION "jsonb_append" (jsonb, jsonb)
+RETURNS jsonb AS $$
+
+WITH json_union AS
+  (SELECT * FROM jsonb_each($1)
+    UNION ALL
+  SELECT * FROM jsonb_each($2))
+SELECT json_object_agg(key, value)::jsonb FROM json_union;
+
+$$ LANGUAGE SQL;
+
+
+CREATE OR REPLACE FUNCTION "jsonb_append_no_cte" (jsonb, jsonb)
+RETURNS jsonb AS $$
+
+SELECT json_object_agg(key, value)::jsonb FROM (SELECT * FROM jsonb_each($1)
+    UNION ALL
+  SELECT * FROM jsonb_each($2))a;
+
+$$ LANGUAGE SQL;
+
 
 DROP OPERATOR IF EXISTS || (jsonb, json);
 DROP OPERATOR IF EXISTS || (jsonb, jsonb);
@@ -172,10 +204,26 @@ SELECT COALESCE(
 )::jsonb
 $function$;
 
+
+-- CREATE OR REPLACE FUNCTION "jsonb_update_only_if_present" (
+--   "record" record,
+--   "json" jsonb
+-- )
+-- RETURNS record
+-- LANGUAGE SQL
+-- IMMUTABLE
+-- STRICT
+-- AS $$
+--
+-- SELECT jsonb_populate_record("record", row_to_json("record")::jsonb #= json)
+--
+-- $$;
+
 DROP OPERATOR IF EXISTS #= (jsonb, json);
 DROP OPERATOR IF EXISTS #= (jsonb, jsonb);
 CREATE OPERATOR #= (LEFTARG = jsonb, RIGHTARG = json, PROCEDURE = jsonb_update_only_if_present);
 CREATE OPERATOR #= (LEFTARG = jsonb, RIGHTARG = jsonb, PROCEDURE = jsonb_update_only_if_present);
+
 
 
 CREATE OR REPLACE FUNCTION "json_object_values"(
@@ -207,7 +255,9 @@ $function$;
 
 
 -- Operator: -
--- ARG[0], RETURN json
+
+-- We should also allow the case of a JSON array, rather than
+-- just objects. This should remove the elements from the array.
 
 CREATE OR REPLACE FUNCTION "json_subtract"(
   "json" json,
@@ -225,7 +275,7 @@ SELECT CASE WHEN "json"::jsonb ? "remove" THEN COALESCE(
   '{}'
 )::json
 ELSE "json"
-END;
+END
 $function$;
 
 
@@ -238,12 +288,14 @@ CREATE OR REPLACE FUNCTION "json_subtract"(
   IMMUTABLE
   STRICT
 AS $function$
-SELECT COALESCE(
+SELECT CASE WHEN "json"::jsonb ?| "keys" THEN COALESCE(
   (SELECT ('{' || string_agg(to_json("key")::text || ':' || "value", ',') || '}')
      FROM json_each("json")
     WHERE "key" <> ALL ("keys")),
   '{}'
 )::json
+ELSE "json"
+END
 $function$;
 
 
@@ -304,12 +356,14 @@ CREATE OR REPLACE FUNCTION "jsonb_subtract"(
   IMMUTABLE
   STRICT
 AS $function$
-SELECT COALESCE(
+SELECT CASE WHEN "json" ? "remove" THEN COALESCE(
   (SELECT ('{' || string_agg(to_json("key")::text || ':' || "value", ',') || '}')
      FROM jsonb_each("json") -- Until this function is added!
     WHERE "key" <> "remove"),
   '{}'
 )::jsonb
+ELSE "json"
+END
 $function$;
 
 
@@ -322,12 +376,14 @@ CREATE OR REPLACE FUNCTION "jsonb_subtract"(
   IMMUTABLE
   STRICT
 AS $function$
-SELECT COALESCE(
+SELECT CASE WHEN "json" ?| "keys" THEN COALESCE(
   (SELECT ('{' || string_agg(to_json("key")::text || ':' || "value", ',') || '}')
      FROM jsonb_each("json")
     WHERE "key" <> ALL ("keys")),
   '{}'
 )::jsonb
+ELSE "json"
+END
 $function$;
 
 
