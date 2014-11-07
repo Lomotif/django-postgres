@@ -195,7 +195,7 @@ def InRangeFactory(RangeType, range_cast=None, column_cast=None):
         column_cast = RangeType.__name__.lower().replace('range', '')
 
     class InRange(models.lookups.BuiltinLookup):
-        lookup_name = 'in'
+        lookup_name = 'inrange'
 
         def __init__(self, lhs, rhs):
             self.lhs, self.rhs = lhs, rhs

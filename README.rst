@@ -17,10 +17,6 @@ ArrayField
 ----------
 A backport of `django.contrib.postgres`' `ArrayField`.
 
-BigIntField
------------
-A wrapper on `IntegerField` that uses the postgres `bigint` column type. Does nothing else.
-
 CompositeField
 --------------
 A parent class for creating your own Composite Types.

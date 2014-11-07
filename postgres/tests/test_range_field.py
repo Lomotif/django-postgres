@@ -102,19 +102,19 @@ class TestDjangoFieldLookupsWithRange(TestCase):
         _20 = DjangoFieldsModel.objects.create(integer=20)
         _100 = DjangoFieldsModel.objects.create(integer=100)
 
-        result = DjangoFieldsModel.objects.filter(integer__in=NumericRange(lower=1, upper=20, bounds='[]'))
+        result = DjangoFieldsModel.objects.filter(integer__inrange=NumericRange(lower=1, upper=20, bounds='[]'))
         self.assertEquals(set([_10, _20]), set(result))
 
-        result = DjangoFieldsModel.objects.filter(integer__in='[1,20]')
+        result = DjangoFieldsModel.objects.filter(integer__inrange='[1,20]')
         self.assertEquals(set([_10, _20]), set(result))
 
-        result = DjangoFieldsModel.objects.filter(integer__in='(10,100)')
+        result = DjangoFieldsModel.objects.filter(integer__inrange='(10,100)')
         self.assertEquals(set([_20]), set(result))
 
-        result = DjangoFieldsModel.objects.filter(integer__in='(,)')
+        result = DjangoFieldsModel.objects.filter(integer__inrange='(,)')
         self.assertEquals(set([_0,_10,_20,_100]), set(result))
 
-        result = DjangoFieldsModel.objects.exclude(integer__in='[1,20]')
+        result = DjangoFieldsModel.objects.exclude(integer__inrange='[1,20]')
         self.assertEquals(set([_0,_100]), set(result))
 
     def test_date_range_lookups(self):
@@ -123,8 +123,8 @@ class TestDjangoFieldLookupsWithRange(TestCase):
         c = DjangoFieldsModel.objects.create(date='2001-01-03')
         d = DjangoFieldsModel.objects.create(date='2001-01-04')
 
-        result = DjangoFieldsModel.objects.filter(date__in=DateRange(lower='2001-01-01', upper='2001-01-03', bounds='(]'))
+        result = DjangoFieldsModel.objects.filter(date__inrange=DateRange(lower='2001-01-01', upper='2001-01-03', bounds='(]'))
         self.assertEquals(set([b,c]), set(result))
 
-        result = DjangoFieldsModel.objects.filter(date__in='(2001-01-01,2001-01-03]')
+        result = DjangoFieldsModel.objects.filter(date__inrange='(2001-01-01,2001-01-03]')
         self.assertEquals(set([b,c]), set(result))
