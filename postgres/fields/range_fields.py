@@ -239,3 +239,28 @@ def InRangeFactory(RangeType, range_cast=None, column_cast=None):
 models.DateField.register_lookup(InRangeFactory(DateRange))
 models.DateTimeField.register_lookup(InRangeFactory(DateTimeTZRange))
 models.IntegerField.register_lookup(InRangeFactory(NumericRange, range_cast='int4range', column_cast='integer'))
+
+
+class NormalizeSQL(models.sql.aggregates.Aggregate):
+    sql_template = "normalize(array_agg(%(field)s))"
+    sql_function = None
+
+models.sql.aggregates.Normalize = NormalizeSQL
+
+
+class Normalize(models.aggregates.Aggregate):
+    name = 'Normalize'
+    template = 'normalize(array_agg(%(expression)s))'
+
+
+
+class MissingSQL(models.sql.aggregates.Aggregate):
+    sql_template = 'missing_ranges(array_agg(%(field)s))'
+    sql_function = None
+
+models.sql.aggregates.Missing = MissingSQL
+
+
+class Missing(models.aggregates.Aggregate):
+    name = 'Missing'
+    template = 'missing_ranges(array_agg(%(expression)s))'
