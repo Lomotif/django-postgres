@@ -40,7 +40,7 @@ DECLARE
 
 BEGIN
   _missing := (SELECT
-    array_agg(int4range(upper, lead, '(]'))
+    array_agg(int4range(upper, lead, '[)'))
     FROM (
       SELECT lower(x), upper(x), lead(lower(x)) OVER (ORDER BY lower(x) NULLS FIRST)
       FROM unnest($1) x ORDER BY lower NULLS FIRST
@@ -50,7 +50,7 @@ BEGIN
 
   _range := (SELECT x FROM unnest($1) x ORDER BY x LIMIT 1);
   IF NOT lower_inf(_range) THEN
-    _missing := array_prepend(int4range(NULL, lower(_range), '(]'));
+    _missing := array_prepend(int4range(NULL, lower(_range), '[)'));
   END IF;
 
   RETURN _missing;
