@@ -45,12 +45,12 @@ BEGIN
       SELECT lower(x), upper(x), lead(lower(x)) OVER (ORDER BY lower(x) NULLS FIRST)
       FROM unnest($1) x ORDER BY lower NULLS FIRST
     ) x
-    WHERE upper < lead OR lead IS NULL
+    WHERE upper < lead OR (lead IS NULL AND upper IS NOT NULL)
   );
 
   _range := (SELECT x FROM unnest($1) x ORDER BY x LIMIT 1);
   IF NOT lower_inf(_range) THEN
-    _missing := array_prepend(int4range(NULL, lower(_range), '[)'));
+    _missing := array_prepend(int4range(NULL, lower(_range), '[)'), _missing);
   END IF;
 
   RETURN _missing;
@@ -58,3 +58,9 @@ END;
 
 $$ LANGUAGE plpgsql;
 
+
+CREATE AGGREGATE missing_ranges (int4range) (
+  sfunc = array_append,
+  stype = int4range[],
+  finalfunc = missing_ranges
+);
