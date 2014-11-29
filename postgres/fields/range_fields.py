@@ -3,6 +3,7 @@ from decimal import Decimal
 import datetime
 
 from django.db import models
+from django.db.models.sql import aggregates
 from django.utils import six
 from django import forms
 from django.utils.translation import ugettext_lazy as _
@@ -148,7 +149,7 @@ class RangeLookup(models.Lookup):
         # to a range of the correct type, so psycopg2 will
         # adapt it correctly.
         if isinstance(rhs, six.string_types) and RANGE_RE.match(rhs):
-            self.rhs = range_from_string(self.lhs.source.range_type, rhs)
+            self.rhs = range_from_string(self.lhs.output_field.range_type, rhs)
 
     def as_sql(self, qn, connection):
         lhs, lhs_params = self.process_lhs(qn, connection)
@@ -241,11 +242,11 @@ models.DateTimeField.register_lookup(InRangeFactory(DateTimeTZRange))
 models.IntegerField.register_lookup(InRangeFactory(NumericRange, range_cast='int4range', column_cast='integer'))
 
 
-class NormalizeSQL(models.sql.aggregates.Aggregate):
+class NormalizeSQL(aggregates.Aggregate):
     sql_template = "normalize(array_agg(%(field)s))"
     sql_function = None
 
-models.sql.aggregates.Normalize = NormalizeSQL
+aggregates.Normalize = NormalizeSQL
 
 
 class Normalize(models.aggregates.Aggregate):
@@ -254,11 +255,11 @@ class Normalize(models.aggregates.Aggregate):
 
 
 
-class MissingSQL(models.sql.aggregates.Aggregate):
+class MissingSQL(aggregates.Aggregate):
     sql_template = 'missing_ranges(array_agg(%(field)s))'
     sql_function = None
 
-models.sql.aggregates.Missing = MissingSQL
+aggregates.Missing = MissingSQL
 
 
 class Missing(models.aggregates.Aggregate):
