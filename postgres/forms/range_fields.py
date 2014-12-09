@@ -1,7 +1,8 @@
 
 from django import forms
+from django.utils.translation import ugettext_lazy as _
 
-from psycopg2.extras import Range, NumericRange, DateRange, DateTimeRange
+from psycopg2.extras import Range, NumericRange, DateRange, DateTimeTZRange
 
 LOWER = [('(', '('), ('[', '[')]
 UPPER = [(')', ')'), (']', ']')]
@@ -32,6 +33,8 @@ class RangeWidget(forms.MultiWidget):
 class DateRangeWidget(RangeWidget):
     base_widget = forms.DateInput
 
+class DateTimeRangeWidget(RangeWidget):
+    base_widget = forms.DateTimeInput
 
 class NumericRangeWidget(RangeWidget):
     base_widget = forms.TextInput
@@ -43,8 +46,8 @@ class RangeField(forms.MultiValueField):
     range_type = None
 
     def __init__(self, *args, **kwargs):
-        self.range_type = kwargs.pop('range_type', Range)
-        self.base_field = kwargs.pop('base_field', forms.IntegerField)
+        self.range_type = kwargs.pop('range_type', self.range_type or Range)
+        self.base_field = kwargs.pop('base_field', self.base_field or forms.IntegerField)
         self.widget = kwargs.pop('widget', self.widget)
 
         fields = (
@@ -64,6 +67,8 @@ class RangeField(forms.MultiValueField):
         ])
 
     def compress(self, data_list):
+        if data_list[2] < data_list[1]:
+            raise forms.ValidationError(_('Range lower bound must be less than or equal to range upper bound.'))
         return self.range_type(
             lower=data_list[1],
             upper=data_list[2],
@@ -78,7 +83,9 @@ class DateRangeField(RangeField):
 
 
 class DateTimeRangeField(DateRangeField):
-    range_type = DateTimeRange
+    widget = DateTimeRangeWidget
+    range_type = DateTimeTZRange
+    base_field = forms.DateTimeField
 
 
 class NumericRangeField(RangeField):

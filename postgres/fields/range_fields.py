@@ -3,11 +3,12 @@ from decimal import Decimal
 import datetime
 
 from django.db import models
+from django.db.models.sql import aggregates
 from django.utils import six
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 
-from psycopg2._range import Range, DateRange, DateTimeRange, NumericRange
+from psycopg2._range import Range, DateRange, DateTimeTZRange, NumericRange
 
 from ..forms import range_fields
 
@@ -25,6 +26,10 @@ NUMBER_RE = re.compile(
 DATE_RE = re.compile(
     r'^(?P<year>\d\d\d\d)-(?P<month>(0\d)|(1[012]))-(?P<day>([012]\d)|(3[01]))$'
 )
+DATETIME_RE = re.compile(
+    r'^(?P<year>\d\d\d\d)-(?P<month>(0\d)|(1[012]))-(?P<day>([012]\d)|(3[01]))'
+    r' (?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)$'
+)
 
 
 def cast(value):
@@ -39,6 +44,11 @@ def cast(value):
     if DATE_RE.match(value):
         return datetime.date(**dict(
             (key, int(value)) for key, value in DATE_RE.match(value).groupdict()
+        ))
+
+    if DATETIME_RE.match(value):
+        return datetime.datetime(**dict(
+            (key, int(value)) for key, value in DATETIME_RE.match(value).groupdict()
         ))
 
     return None
@@ -86,6 +96,11 @@ class RangeField(models.Field):
         defaults.update(kwargs)
         return super(RangeField, self).formfield(**defaults)
 
+    def deconstruct(self):
+        name, path, args, kwargs = super(RangeField, self).deconstruct()
+        path = 'postgres.fields.range_fields.{}'.format(self.__class__.__name__)
+        return name, path, args, kwargs
+
 
 class NumericRangeField(RangeField):
     range_type = NumericRange
@@ -120,8 +135,11 @@ class DateRangeField(RangeField):
 
 
 class DateTimeRangeField(RangeField):
-    range_type = DateTimeRange
+    range_type = DateTimeTZRange
     formfield_class = range_fields.DateTimeRangeField
+
+    def db_type(self, connection):
+        return 'tstzrange'
 
 
 class RangeLookup(models.Lookup):
@@ -131,7 +149,7 @@ class RangeLookup(models.Lookup):
         # to a range of the correct type, so psycopg2 will
         # adapt it correctly.
         if isinstance(rhs, six.string_types) and RANGE_RE.match(rhs):
-            self.rhs = range_from_string(self.lhs.source.range_type, rhs)
+            self.rhs = range_from_string(self.lhs.output_field.range_type, rhs)
 
     def as_sql(self, qn, connection):
         lhs, lhs_params = self.process_lhs(qn, connection)
@@ -220,14 +238,15 @@ def InRangeFactory(RangeType, range_cast=None, column_cast=None):
     return InRange
 
 models.DateField.register_lookup(InRangeFactory(DateRange))
+models.DateTimeField.register_lookup(InRangeFactory(DateTimeTZRange))
 models.IntegerField.register_lookup(InRangeFactory(NumericRange, range_cast='int4range', column_cast='integer'))
 
 
-class NormalizeSQL(models.sql.aggregates.Aggregate):
+class NormalizeSQL(aggregates.Aggregate):
     sql_template = "normalize(array_agg(%(field)s))"
     sql_function = None
 
-models.sql.aggregates.Normalize = NormalizeSQL
+aggregates.Normalize = NormalizeSQL
 
 
 class Normalize(models.aggregates.Aggregate):
@@ -236,11 +255,11 @@ class Normalize(models.aggregates.Aggregate):
 
 
 
-class MissingSQL(models.sql.aggregates.Aggregate):
+class MissingSQL(aggregates.Aggregate):
     sql_template = 'missing_ranges(array_agg(%(field)s))'
     sql_function = None
 
-models.sql.aggregates.Missing = MissingSQL
+aggregates.Missing = MissingSQL
 
 
 class Missing(models.aggregates.Aggregate):

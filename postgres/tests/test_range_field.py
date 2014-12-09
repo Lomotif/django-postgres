@@ -1,17 +1,29 @@
 from __future__ import unicode_literals
 
+import datetime
+
 from django.test import TestCase
 
-from psycopg2.extras import DateRange, DateTimeRange, NumericRange
-
-from postgres.fields import range_fields
+from psycopg2.extras import DateRange, DateTimeTZRange, NumericRange
 
 from .models import RangeFieldsModel, DjangoFieldsModel
 
+
 class TestRangeFields(TestCase):
     def test_range_fields_in_model(self):
-        created = RangeFieldsModel.objects.create()
-        fetched = RangeFieldsModel.objects.get()
+        RangeFieldsModel.objects.create()
+        RangeFieldsModel.objects.get()
+
+    def test_datetime_range(self):
+        RangeFieldsModel.objects.create(
+            datetime_range='[2014-01-01 09:00:00, 2014-01-01 12:30:00)'
+        )
+        RangeFieldsModel.objects.create(
+            datetime_range=DateTimeTZRange(
+                datetime.datetime(2014, 1, 1, 9, 0),
+                datetime.datetime(2014, 1, 1, 12, 30)
+            )
+        )
 
 
 class TestRangeFieldLookups(TestCase):
@@ -33,7 +45,6 @@ class TestRangeFieldLookups(TestCase):
         RangeFieldsModel.objects.create(int4_range='[1,7]')
         self.assertEquals(1, RangeFieldsModel.objects.filter(int4_range__gt='[0,8]').count())
         self.assertEquals(0, RangeFieldsModel.objects.filter(int4_range__gt='[1,7]').count())
-
 
     def test_range_overlaps(self):
         RangeFieldsModel.objects.create(int4_range='[1,7]')
@@ -112,10 +123,10 @@ class TestDjangoFieldLookupsWithRange(TestCase):
         self.assertEquals(set([_20]), set(result))
 
         result = DjangoFieldsModel.objects.filter(integer__inrange='(,)')
-        self.assertEquals(set([_0,_10,_20,_100]), set(result))
+        self.assertEquals(set([_0, _10, _20, _100]), set(result))
 
         result = DjangoFieldsModel.objects.exclude(integer__inrange='[1,20]')
-        self.assertEquals(set([_0,_100]), set(result))
+        self.assertEquals(set([_0, _100]), set(result))
 
     def test_date_range_lookups(self):
         a = DjangoFieldsModel.objects.create(date='2001-01-01')
@@ -124,7 +135,7 @@ class TestDjangoFieldLookupsWithRange(TestCase):
         d = DjangoFieldsModel.objects.create(date='2001-01-04')
 
         result = DjangoFieldsModel.objects.filter(date__inrange=DateRange(lower='2001-01-01', upper='2001-01-03', bounds='(]'))
-        self.assertEquals(set([b,c]), set(result))
+        self.assertEquals(set([b, c]), set(result))
 
         result = DjangoFieldsModel.objects.filter(date__inrange='(2001-01-01,2001-01-03]')
-        self.assertEquals(set([b,c]), set(result))
+        self.assertEquals(set([b, c]), set(result))

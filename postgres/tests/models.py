@@ -44,7 +44,7 @@ class IntervalFieldModel(models.Model):
 
 class RangeFieldsModel(models.Model):
     date_range = range_fields.DateRangeField(default='(,)')
-    datetime_range = range_fields.DateRangeField(default='(,)')
+    datetime_range = range_fields.DateTimeRangeField(default='(,)')
     int4_range = range_fields.Int4RangeField(default='(,)')
 
 
