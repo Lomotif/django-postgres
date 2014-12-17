@@ -12,6 +12,7 @@ DECLARE
 
     app_user_id INTEGER;
     app_ip_address inet;
+    app_session TEXT;
     client_query TEXT;
     statement_only BOOLEAN = 'f';
 BEGIN
@@ -25,6 +26,7 @@ BEGIN
     BEGIN
       SELECT INTO app_user_id CURRENT_SETTING('app.user');
       SELECT INTO app_ip_address CURRENT_SETTING('app.ip_address');
+      SELECT INTO app_session CURRENT_SETTING('app.session');
     EXCEPTION WHEN OTHERS THEN
     END;
 
