@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-import os, sys
+import os
+import sys
 
 from django.conf import settings
 import django
@@ -19,7 +20,7 @@ DEFAULT_SETTINGS = dict(
     DATABASES={
         "default": {
             "ENGINE": "django.db.backends.postgresql_psycopg2",
-            "NAME": "postgres-fields",
+            "NAME": "postgres-fields-{DB_NAME}".format(**os.environ),
         }
     },
     MIDDLEWARE_CLASSES=()
