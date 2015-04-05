@@ -7,50 +7,67 @@ from psycopg2.extensions import register_adapter, adapt, AsIs
 from psycopg2 import ProgrammingError
 
 
-_missing_types = {}
+class CompositeBase(type):
+    """
+    Metaclass for all Composite Types.
 
+    At this stage, no inheritance is available for
+    CompositeField types.
+    """
 
-class CompositeMeta(type):
-    def __init__(cls, name, bases, clsdict):
-        super(CompositeMeta, cls).__init__(name, bases, clsdict)
-        cls.register_composite()
+    def __new__(cls, name, bases, attrs):
+        super_new = super(CompositeBase, cls).__new__
 
-    def register_composite(cls):
-        db_type = cls().db_type(connection)
-        if db_type:
-            try:
-                cls.python_type = register_composite(
-                    db_type,
-                    connection.cursor().cursor,
-                    globally=True
-                ).type
-            except ProgrammingError:
-                _missing_types[db_type] = cls
+        # Ensure initialization is only performed for subclasses,
+        # not the CompositeType class itself.
+        parents = [b for b in bases if isinstance(b, ModelBase)]
+        if not parents:
+            return super_new(cls, name, bases, attrs)
+
+        module = attrs.pop('__module__')
+        new_class = super_new(cls, name, bases, {'__module__': module})
+
+        # Don't need abstract, etc, but we do need a ._meta to enable
+        # adding fields to us.
+        attr_meta = attrs.pop('Meta', None)
+        if not attr_meta:
+            meta = getattr(new_class, 'Meta', None)
+        else:
+            meta = attr_meta
+        base_meta = getattr(new_class, '_meta', None)
+
+        app_label = None
+        app_config = apps.get_containing_app_config(module)
+
+        if getattr(meta, 'app_label', None) is None:
+            if app_config is None:
+                raise RuntimeError(
+                    "CompositeField class %s.%s doesn't declare an explicit "
+                    "app_label and either isn't in an application in "
+                    "INSTALLED_APPS or else was imported before its "
+                    "application was loaded. " % (module, name)
+                )
             else:
-                def adapt_composite(composite):
-                    return AsIs("(%s)::%s" % (
-                        ", ".join([
-                            adapt(getattr(composite, field)).getquoted() for field in composite._fields
-                        ]), db_type
-                    ))
+                app_label = app_config.label
 
-                register_adapter(cls.python_type, adapt_composite)
+        new_class.add_to_class('_meta', Options(meta, app_label))
 
+        # Add the attributes to the class.
+        for obj_name, obj in attrs.items():
+            new_class.add_to_class(obj_name, obj)
 
-class CompositeField(fields.Field):
-    # We should also incorporate the stuff from SubFieldBase, so
-    # we convert any iterable of the correct arity, and coercable types
-    # into the python_type.
-    __metaclass__ = CompositeMeta
-    """
-    A handy base class for defining your own composite fields.
+        field_names = {f.name for f in new_class._meta.local_fields}
 
-    It registers the composite type.
-    """
+    def add_to_class(cls, name, value):
+        if not inspect.isclass(value) and hasattr(value, 'contribute_to_class'):
+            value.contribute_to_class(cls, name)
+        else:
+            setattr(cls, name, value)
 
 
-composite_type_created = Signal(providing_args=['name'])
+class CompositeType(six.with_metaclass(CompositeBase)):
+    def clean_fields(self, exclude=None):
+        if exclude is None:
+            exclude = []
 
-@receiver(composite_type_created)
-def register_composite_late(sender, db_type, **kwargs):
-    _missing_types.pop(db_type).register_composite()
+        errors = {}
