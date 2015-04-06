@@ -86,7 +86,7 @@ class AuditLog(models.Model):
     row_data = postgres.fields.json_field.JSONField(null=True)
     changed_fields = postgres.fields.json_field.JSONField(null=True)
     app_user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
-    app_ip_address = models.IPAddressField(null=True)
+    app_ip_address = models.GenericIPAddressField(null=True)
     app_session = models.TextField(null=True)
 
     objects = AuditManager.from_queryset(AuditLogQuerySet)()
