@@ -21,6 +21,7 @@ DEFAULT_SETTINGS = dict(
         "default": {
             "ENGINE": "django.db.backends.postgresql_psycopg2",
             "NAME": "postgres-fields-{DB_NAME}".format(**os.environ),
+            "PORT": os.environ.get('DB_PORT', 5432),
         }
     },
     MIDDLEWARE_CLASSES=()
