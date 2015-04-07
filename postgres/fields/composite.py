@@ -1,15 +1,16 @@
 import inspect
 
+from django import forms
+from django.db import connection
 from django.db.models import fields
 from django.db.models.base import ModelBase
-from django.db import connection
 from django.dispatch import receiver, Signal
 from django.utils import six
+from django.utils.translation import ugettext as _
 
 from psycopg2.extras import register_composite, CompositeCaster
 from psycopg2.extensions import register_adapter, adapt, AsIs
 from psycopg2 import ProgrammingError
-
 
 _missing_types = {}
 
@@ -112,6 +113,13 @@ class CompositeField(six.with_metaclass(CompositeMeta, fields.Field)):
 
         raise NotImplemented('You must provide a db_type method.')
 
+    def formfield(self, **kwargs):
+        defaults = {
+            'form_class': composite_formfield_factory(self.__class__)
+        }
+        defaults.update(**kwargs)
+        return super(CompositeField, self).formfield(**defaults)
+
 
 composite_type_created = Signal(providing_args=['name'])
 
@@ -119,3 +127,49 @@ composite_type_created = Signal(providing_args=['name'])
 @receiver(composite_type_created)
 def register_composite_late(sender, db_type, **kwargs):
     _missing_types.pop(db_type).register_composite()
+
+
+def composite_field_factory(name, db_type, **fields):
+    fields['db_type'] = lambda self, connection: db_type
+    fields['__module__'] = CompositeField.__module__
+    return type(name, (CompositeField,), fields)
+
+
+def composite_formfield_factory(CompositeField):
+    fields = CompositeField._meta.fields
+
+    class CompositeFormField(forms.MultiValueField):
+        class widget(forms.MultiWidget):
+            def __init__(self):
+                return super(CompositeFormField.widget, self).__init__(widgets=[
+                    field.formfield().widget for field in fields
+                ])
+
+        def __init__(self, *args, **kwargs):
+            if 'fields' not in kwargs:
+                kwargs['fields'] = [
+                    field.formfield() for field in fields
+                ]
+            return super(CompositeFormField, self).__init__(*args, **kwargs)
+
+        def clean(self, value):
+            if not value:
+                return None
+            if isinstance(value, six.string_types):
+                value = value.split(',')
+
+            if len(fields) != len(value):
+                raise forms.ValidationError('arity of data does not match {}'.format(CompositeField.__name__))
+
+            cleaned_data = [field.clean(val) for field, val in zip(self.fields, value)]
+
+            none_data = [x is None for x in cleaned_data]
+
+            if any(none_data) and not all(none_data):
+                raise forms.ValidationError(_('Either no values, or all values must be entered'))
+
+            return CompositeField(
+                **{field.name: val for field, val in zip(fields, cleaned_data)}
+            )
+
+    return CompositeFormField

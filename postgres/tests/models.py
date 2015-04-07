@@ -7,7 +7,6 @@ from django.db import models
 
 from postgres.fields import uuid_field, json_field, interval_field
 from postgres.fields import range_fields
-from postgres.fields.array_field import ArrayField
 
 
 class JSONFieldModel(models.Model):
@@ -53,23 +52,3 @@ class DjangoFieldsModel(models.Model):
     date = models.DateField(null=True, blank=True)
     datetime = models.DateTimeField(null=True, blank=True)
     decimal = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=5)
-
-
-class IntegerArrayModel(models.Model):
-    field = ArrayField(models.IntegerField())
-
-
-class NullableIntegerArrayModel(models.Model):
-    field = ArrayField(models.IntegerField(), blank=True, null=True)
-
-
-class CharArrayModel(models.Model):
-    field = ArrayField(models.CharField(max_length=10))
-
-
-class DateTimeArrayModel(models.Model):
-    field = ArrayField(models.DateTimeField())
-
-
-class NestedIntegerArrayModel(models.Model):
-    field = ArrayField(ArrayField(models.IntegerField()))
