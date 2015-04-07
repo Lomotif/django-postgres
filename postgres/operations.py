@@ -31,8 +31,9 @@ class CreateCompositeType(Operation):
         pass
 
     def database_forwards(self, app_label, schema_editor, from_state, to_state):
+        connection = schema_editor.connection
         schema_editor.execute('CREATE TYPE %s AS (%s)' % (
-            self.name, ", ".join(["%s %s" % field for field in self.fields])
+            self.name, ", ".join(["{} {}".format(name, field.db_type(connection)) for name, field in self.fields])
         ))
         composite_type_created.send(sender=self.__class__, db_type=self.name)
 
