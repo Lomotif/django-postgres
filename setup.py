@@ -11,8 +11,9 @@ setup(
     long_description=README,
     author='Matthew Schinckel',
     author_email='matt@schinckel.net',
-    packages=find_packages(),
+    packages=find_packages(exclude=('tests*',)),
     install_requires=['Django'],
     tests_require=['Django'],
+    requires=['Django'],
     test_suite='runtests.runtests'
 )

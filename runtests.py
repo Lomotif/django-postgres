@@ -4,7 +4,15 @@ import os
 import sys
 
 from django.conf import settings
+from django.core.management import execute_from_command_line
 import django
+
+if django.VERSION < (1, 6):
+    extra_settings = {
+        'TEST_RUNNER': 'discover_runner.DiscoverRunner',
+    }
+else:
+    extra_settings = {}
 
 try:
     from psycopg2cffi import compat
@@ -12,39 +20,29 @@ try:
 except ImportError:
     pass
 
-DEFAULT_SETTINGS = dict(
-    INSTALLED_APPS=(
-        'postgres',
-        'postgres.tests',
-        ),
-    DATABASES={
-        "default": {
-            "ENGINE": "django.db.backends.postgresql_psycopg2",
-            "NAME": 'django-postgres-{ENVNAME}'.format(**os.environ),
-            "PORT": os.environ.get('DB_PORT', 5432),
-            "SERIALIZE": False,
-        }
-    },
-    MIDDLEWARE_CLASSES=()
-)
+
+if not settings.configured:
+    settings.configure(
+        INSTALLED_APPS=(
+            'postgres',
+            'tests',
+            ),
+        DATABASES={
+            "default": {
+                "ENGINE": "django.db.backends.postgresql_psycopg2",
+                "NAME": 'django-postgres-{ENVNAME}'.format(**os.environ),
+                "PORT": os.environ.get('DB_PORT', 5432),
+                "SERIALIZE": False,
+            }
+        },
+        MIDDLEWARE_CLASSES=(),
+        **extra_settings
+    )
 
 
 def runtests():
-    if not settings.configured:
-        settings.configure(**DEFAULT_SETTINGS)
-
-    django.setup()
-
-    parent = os.path.dirname(os.path.abspath(__file__))
-    sys.path.insert(0, parent)
-
-    from django.test.runner import DiscoverRunner
-    runner_class = DiscoverRunner
-    test_args = ['postgres.tests']
-
-    failures = runner_class(
-        verbosity=1, interactive=True, failfast=False).run_tests(test_args)
-    sys.exit(failures)
+    argv = sys.argv[:1] + ['test', '--noinput', 'tests']
+    execute_from_command_line(argv)
 
 
 if __name__ == '__main__':
