@@ -55,14 +55,38 @@ class CompositeMeta(ModelBase):
 
             new_class.register_composite()
 
+            fields = new_class._meta.fields
+            form_fields = [f.formfield() for f in fields]
+            widgets = [f.widget for f in form_fields]
+
             # We may as well create a FormField subclass, too.
             widget = type('{}Widget'.format(name), (forms.MultiWidget,), {
-                '__init__': lambda self: forms.MultiWidget.__init__(self, widgets=[f.formfield().widget for f in new_class._meta.fields]),
+                '__init__': lambda self: forms.MultiWidget.__init__(self, widgets=widgets),
                 'decompress': lambda self, value: value or new_class()
             })
+
+            def clean(self, value):
+                if not value:
+                    return None
+                if isinstance(value, six.string_types):
+                    value = value.split(',')
+
+                if len(fields) != len(value):
+                    raise forms.ValidationError('arity of data does not match {}'.format(new_class.__name__))
+
+                cleaned_data = [field.clean(val) for field, val in zip(self.fields, value)]
+
+                none_data = [x is None for x in cleaned_data]
+
+                if any(none_data) and not all(none_data):
+                    raise forms.ValidationError(_('Either no values, or all values must be entered'))
+
+                return new_class(*cleaned_data)
+
             form_field = type('{}FormField'.format(name), (forms.MultiValueField,), {
+                '__init__': lambda self, *args, **kwargs: forms.MultiValueField.__init__(self, *args, fields=form_fields, **kwargs),
                 'widget': widget,
-                'clean': lambda self, value: new_class(*value) if all(value) else None
+                'clean': clean
             })
             # We also want to create a Field subclass, with the same name as
             # we have, but with Field appended. Perhaps we should be looking
