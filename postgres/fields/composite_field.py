@@ -142,7 +142,7 @@ class BaseCompositeField(fields.Field):
         # module, so we need to ensure that the migrations framework will look there
         # for it.
         name, path, args, kwargs = super(BaseCompositeField, self).deconstruct()
-        path = path.replace('postgres.fields.composite', self.python_type.__module__)
+        path = path.replace('postgres.fields.composite_field', self.python_type.__module__)
         return name, path, args, kwargs
 
     def get_default(self):

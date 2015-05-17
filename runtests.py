@@ -26,7 +26,7 @@ if not settings.configured:
         INSTALLED_APPS=(
             'postgres',
             'tests',
-            ),
+        ),
         DATABASES={
             "default": {
                 "ENGINE": "django.db.backends.postgresql_psycopg2",

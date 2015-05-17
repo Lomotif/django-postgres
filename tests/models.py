@@ -5,7 +5,8 @@ from django.db import models
 
 from postgres.fields import uuid_field, json_field, interval_field
 from postgres.fields import range_fields
-from postgres.fields import CompositeType, composite_type_factory
+
+from .fields import TimeBooleanField
 
 
 class JSONFieldModel(models.Model):
@@ -51,15 +52,6 @@ class DjangoFieldsModel(models.Model):
     date = models.DateField(null=True, blank=True)
     datetime = models.DateTimeField(null=True, blank=True)
     decimal = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=5)
-
-
-class TimeBoolean(CompositeType):
-    time = models.TimeField()
-    boolean = models.BooleanField()
-
-    db_type = 'time_boolean'
-
-composite_type_factory('Foo', 'foo', time=models.TimeField())
 
 
 class CompositeFieldModel(models.Model):
