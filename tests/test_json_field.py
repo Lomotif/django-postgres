@@ -160,3 +160,14 @@ class TestJSONFieldLookups(TestCase):
             results.query.__str__(),
             "Query appears to not use a path lookup."
         )
+
+    def test_ordering(self):
+        b = JSONFieldModel.objects.create(json={"x": 2})
+        a = JSONFieldModel.objects.create(json={"x": 1})
+
+        from django.db.models.expressions import OrderBy, RawSQL
+        from django.db.models import BooleanField
+
+        query = JSONFieldModel.objects.order_by(OrderBy(RawSQL("json #> '{x}'", [])))
+        self.assertEquals(a, query[0])
+        self.assertEquals(b, query[1])
