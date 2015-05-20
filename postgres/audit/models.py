@@ -4,7 +4,6 @@ from django.utils.functional import cached_property
 
 import postgres.fields.json_field
 import postgres.fields.internal_types
-import postgres.fields.bigint_field
 
 known_models = {}
 
