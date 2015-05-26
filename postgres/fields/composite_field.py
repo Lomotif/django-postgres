@@ -5,9 +5,9 @@ from django import forms
 from django.db import connection
 from django.db.models import fields
 from django.db.models.base import ModelBase
-from django.dispatch import receiver, Signal
 from django.utils import six
 from django.utils.translation import ugettext as _
+from django.utils.encoding import force_text
 
 from psycopg2.extras import register_composite, CompositeCaster
 from psycopg2.extensions import register_adapter, adapt, AsIs
@@ -196,6 +196,10 @@ class CompositeType(six.with_metaclass(CompositeMeta)):
 
     def __getitem__(self, i):
         return getattr(self, self._meta.fields[i].name)
+
+    def _get_FIELD_display(self, field):
+        value = getattr(self, field.attname)
+        return force_text(dict(field.flatchoices).get(value, value), strings_only=True)
 
 
 def composite_type_factory(name, db_type, **fields):
