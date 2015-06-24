@@ -201,6 +201,9 @@ class CompositeType(six.with_metaclass(CompositeMeta)):
         value = getattr(self, field.attname)
         return force_text(dict(field.flatchoices).get(value, value), strings_only=True)
 
+    def _get_next_or_previous_by_FIELD(self, field, is_next, **kwargs):
+        raise NotImplemented()
+
 
 def composite_type_factory(name, db_type, **fields):
     frame = inspect.stack()[1][0]
