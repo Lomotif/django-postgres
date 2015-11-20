@@ -224,16 +224,17 @@ def composite_type_factory(name, db_type, **fields):
 
 
 # Patch migrations.ProjectState
-
-from django.db.migrations.state import ProjectState
+from django.db.migrations.state import ProjectState  # NOQA
 
 old__init__ = ProjectState.__init__
+
 
 def new__init__(self, *args, **kwargs):
     old__init__(self, *args, **kwargs)
     self.composite_fields = {}
 
 ProjectState.__init__ = new__init__
+
 
 def composite_fields(state):
     fields = set([])
@@ -248,6 +249,8 @@ def composite_fields(state):
 
 old__eq__ = ProjectState.__eq__
 
+
 def new__eq__(self, other):
     return old__eq__(self, other) and self.composite_fields == other.composite_fields
+
 ProjectState.__eq__ = new__eq__

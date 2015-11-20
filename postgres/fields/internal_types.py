@@ -1,5 +1,6 @@
 from django.db.models.fields import IntegerField
 
+
 class OIDField(IntegerField):
     """
     Postgres OID type.

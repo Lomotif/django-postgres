@@ -33,8 +33,10 @@ class RangeWidget(forms.MultiWidget):
 class DateRangeWidget(RangeWidget):
     base_widget = forms.DateInput
 
+
 class DateTimeRangeWidget(RangeWidget):
     base_widget = forms.DateTimeInput
+
 
 class NumericRangeWidget(RangeWidget):
     base_widget = forms.TextInput

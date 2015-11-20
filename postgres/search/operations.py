@@ -70,14 +70,7 @@ def quote_text(value, table):
 
 
 class SearchModel(Operation):
-    def __init__(self,
-        table,
-        search_columns,
-        title,
-        detail,
-        url_name,
-        url_kwargs=None
-    ):
+    def __init__(self, table, search_columns, title, detail, url_name, url_kwargs=None):
         url_kwargs = url_kwargs or {'pk': 'id'}
         self.data = {
             'table': table,

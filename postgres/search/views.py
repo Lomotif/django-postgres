@@ -7,6 +7,7 @@ from ..views import FormListView, AjaxTemplateMixin
 from .models import Search
 from .forms import SearchForm
 
+
 def uikit(request):
     searches = Search.objects.matching(request.GET['search'], ranked=True)[:15]
 
@@ -19,7 +20,6 @@ def uikit(request):
             } for search in searches
         ]
     }))
-
 
 
 class SearchResults(AjaxTemplateMixin, FormListView):

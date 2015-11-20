@@ -1,10 +1,11 @@
 import os
 
 from django.conf import settings
-from django.db import models, migrations
+from django.db import migrations
 
 json_ops = os.path.join(os.path.dirname(__file__), '..', '..', 'sql', 'json', 'jsonb_subtract.sql')
 if_modified = os.path.join(os.path.dirname(__file__), '..', 'sql', 'if_modified.sql')
+
 
 class Migration(migrations.Migration):
     dependencies = [

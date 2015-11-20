@@ -1,6 +1,7 @@
 from django.views.generic.edit import FormMixin
 from django.views.generic import ListView
 
+
 class AjaxTemplateMixin(object):
     ajax_template_name = None
 
@@ -56,5 +57,3 @@ class FormListView(FormMixin, ListView):
             self.object_list = []
         context = self.get_context_data(form=form)
         return self.render_to_response(context)
-
-

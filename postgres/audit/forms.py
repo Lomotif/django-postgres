@@ -1,7 +1,6 @@
 import datetime
 
 from django import forms
-from django.core.paginator import Paginator, InvalidPage, EmptyPage
 
 from .models import AuditLog
 

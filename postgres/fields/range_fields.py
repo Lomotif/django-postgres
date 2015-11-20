@@ -254,7 +254,6 @@ class Normalize(models.aggregates.Aggregate):
     template = 'normalize(array_agg(%(expression)s))'
 
 
-
 class MissingSQL(aggregates.Aggregate):
     sql_template = 'missing_ranges(array_agg(%(field)s))'
     sql_function = None
