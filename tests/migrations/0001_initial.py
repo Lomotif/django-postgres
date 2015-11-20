@@ -7,6 +7,7 @@ import postgres.fields.range_fields
 import tests.models
 import postgres.fields
 import postgres.fields.uuid_field
+import postgres.operations
 import uuid
 import decimal
 import django.core.serializers.json
@@ -18,9 +19,12 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql='CREATE TYPE time_boolean AS (time time, boolean boolean)',
-            reverse_sql='DROP TYPE time_boolean',
+        postgres.operations.CreateCompositeType(
+            name='time_boolean',
+            fields=[
+                ('time', models.TimeField()),
+                ('boolean', models.BooleanField())
+            ]
         ),
         migrations.CreateModel(
             name='CompositeFieldModel',

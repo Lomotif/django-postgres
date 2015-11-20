@@ -222,47 +222,32 @@ def composite_type_factory(name, db_type, **fields):
 
     return new_class
 
-# def composite_field_factory(name, db_type, **fields):
-#     fields['db_type'] = lambda self, connection: db_type
-#     fields['__module__'] = CompositeField.__module__
-#     return type(name, (CompositeField,), fields)
-#
-#
-# def composite_formfield_factory(CompositeField):
-#     fields = CompositeField._meta.fields
-#
-#     class CompositeFormField(forms.MultiValueField):
-#         class widget(forms.MultiWidget):
-#             def __init__(self):
-#                 return super(CompositeFormField.widget, self).__init__(widgets=[
-#                     field.formfield().widget for field in fields
-#                 ])
-#
-#         def __init__(self, *args, **kwargs):
-#             if 'fields' not in kwargs:
-#                 kwargs['fields'] = [
-#                     field.formfield() for field in fields
-#                 ]
-#             return super(CompositeFormField, self).__init__(*args, **kwargs)
-#
-#         def clean(self, value):
-#             if not value:
-#                 return None
-#             if isinstance(value, six.string_types):
-#                 value = value.split(',')
-#
-#             if len(fields) != len(value):
-#                 raise forms.ValidationError('arity of data does not match {}'.format(CompositeField.__name__))
-#
-#             cleaned_data = [field.clean(val) for field, val in zip(self.fields, value)]
-#
-#             none_data = [x is None for x in cleaned_data]
-#
-#             if any(none_data) and not all(none_data):
-#                 raise forms.ValidationError(_('Either no values, or all values must be entered'))
-#
-#             return CompositeField(
-#                 **{field.name: val for field, val in zip(fields, cleaned_data)}
-#             )
-#
-#     return CompositeFormField
+
+# Patch migrations.ProjectState
+
+from django.db.migrations.state import ProjectState
+
+old__init__ = ProjectState.__init__
+
+def new__init__(self, *args, **kwargs):
+    old__init__(self, *args, **kwargs)
+    self.composite_fields = {}
+
+ProjectState.__init__ = new__init__
+
+def composite_fields(state):
+    fields = set([])
+    for model in state.models.values():
+        for field in model.fields:
+            print(field)
+            if isinstance(field, BaseCompositeField):
+                fields.add(field)
+    return set(fields)
+
+# ProjectState.composite_fields = property(composite_fields)
+
+old__eq__ = ProjectState.__eq__
+
+def new__eq__(self, other):
+    return old__eq__(self, other) and self.composite_fields == other.composite_fields
+ProjectState.__eq__ = new__eq__

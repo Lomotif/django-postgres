@@ -1,6 +1,6 @@
 from django.db.migrations.operations.base import Operation
 
-from .fields.composite import composite_type_created
+# from .fields.composite_field import composite_type_created
 
 
 class LoadSQLFromScript(Operation):
@@ -28,14 +28,14 @@ class CreateCompositeType(Operation):
         return True
 
     def state_forwards(self, app_label, state):
-        pass
+        state.composite_fields[self.name] = self.fields
 
     def database_forwards(self, app_label, schema_editor, from_state, to_state):
         connection = schema_editor.connection
         schema_editor.execute('CREATE TYPE %s AS (%s)' % (
             self.name, ", ".join(["{} {}".format(name, field.db_type(connection)) for name, field in self.fields])
         ))
-        composite_type_created.send(sender=self.__class__, db_type=self.name)
+        # composite_type_created.send(sender=self.__class__, db_type=self.name)
 
     def state_backwards(self, app_label, state):
         pass
